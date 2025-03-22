@@ -12,7 +12,7 @@ app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-key-for-testing')
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=30)
 
 # Allow the frontend (React) to talk to the backend (Flask) even if they're on different domains
-CORS(app, supports_credentials=True)
+CORS(app, supports_credentials=True, origins=['http://localhost:3000'])
 db.init_app(app)
 
 # Set up Flask-Login
@@ -64,6 +64,24 @@ def check_auth():
     if current_user.is_authenticated:
         return jsonify({'authenticated': True, 'user': current_user.to_dict()})
     return jsonify({'authenticated': False}), 401
+
+
+# Route to get all user data in one request
+# URL: /api/user-data (GET)
+@app.route('/api/user-data', methods=['GET'])
+@login_required
+def get_user_data():
+    routines = Routine.query.filter_by(user_id=current_user.id).all()
+    exercises = Exercise.query.all()
+    muscle_groups = db.session.query(Exercise.muscle_group).distinct().all()
+    equipment_list = db.session.query(Exercise.equipment).distinct().all()
+    
+    return jsonify({
+        'routines': [routine.to_dict() for routine in routines],
+        'exercises': [exercise.to_dict() for exercise in exercises],
+        'muscle_groups': [mg[0] for mg in muscle_groups if mg[0]],
+        'equipment': [eq[0] for eq in equipment_list if eq[0]]
+    })
 
 # -- ROUTINE ROUTES --
 # Route to get a specific routine
@@ -294,4 +312,4 @@ if __name__ == '__main__':
     with app.app_context():
         db.create_all()
     # Run the app in debug mode (shows errors and auto-reloads on changes)
-    app.run(debug=True)
+    app.run(debug=True, port=5555)

@@ -67,8 +67,8 @@ class Routine(db.Model):
     name = db.Column(db.String(100), nullable=False)
     day_of_week = db.Column(db.String(10))
     description = db.Column(db.Text)
-    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.UTC))
-    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.UTC), onupdate=lambda: datetime.now(timezone.UTC))
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime, onupdate=lambda: datetime.now(timezone.utc))
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
 
     routine_exercises = db.relationship('RoutineExercise', backref='routine', lazy=True, cascade="all, delete-orphan")
