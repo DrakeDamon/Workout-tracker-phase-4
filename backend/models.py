@@ -97,6 +97,19 @@ class RoutineExercise(db.Model):
   notes = db.Column(db.Text)
   order = db.Column(db.Integer)
 
+  def to_dict(self):
+    return {
+        'id': self.id,
+        'routine_id': self.routine_id,
+        'exercise_id': self.exercise_id,
+        'exercise': self.exercise.to_dict(),
+        'sets': self.sets,
+        'reps': self.reps,
+        'weight': self.weight,
+        'notes': self.notes,
+        'order': self.order
+    }
+
 
 
   
