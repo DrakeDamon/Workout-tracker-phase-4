@@ -67,6 +67,7 @@ def check_auth():
         return jsonify({'authenticated': True, 'user': current_user.to_dict()})
     return jsonify({'authenticated': False}), 401
 
+# -- ROUTINE ROUTES --
 # Route to get a specific routine
 # URL: /api/routines/1 (GET)
 @app.route('/api/routines/<int:routine_id>', methods=[GET])
@@ -131,3 +132,80 @@ def delete_routine(routine_id):
     db.session.commit()
 
     return jsonify({'message': 'Routine deleted successfully'})
+
+# -- EXERCISE ROUTES --
+# Route to add an exercise to routine
+@app.route('api/routines/<int:routine_id>/exercises', methods=['POST'])
+@login_required
+def add_exercise_to_routine(routine.id):
+    routine = Routine.query.filter_by(id=routine_id, user_id=current_user.id).first()
+
+    if not routine:
+        return jsonify({'error': 'Routine not found'}), 404
+    
+    data = request.get_json()
+    exercise_id=data['exercise_id']
+
+    exercise = Exercise.query.get(exercise_id)
+    if not exercise:
+        return jsonify({'error': 'Exercise not found'}), 404
+    
+    #find highest order number for exercise (to add new one at end)
+    max_order = db.session.query(db.func.max[RoutineExercise.order]).filter_by(routine_id=routine_id).scalar() or 0
+
+    routine_exercise = RoutineExercise(
+        routine_id=routine_id,
+        exercise_id=exercise_id,
+        sets=data.get('sets', 3), 
+        reps=data.get('reps', 10), 
+        weight=data.get('weight'), 
+        notes=data.get('notes'),
+        order=max_order + 1 
+    )
+
+    db.session.add(routine_exercise)
+    db.session.commit()
+
+    return jsonify(RoutineExercise.to_dict()), 201
+
+#Route to update an exercise in routine
+@app.route('/api/routine-exercises/<int:routine_exercise_id>', methods=['PUT'])
+@login_required
+def update_routine_exercise(routine_exercise_id):
+    routine_exercise = RoutineExercise.query.join(Routine).filter(
+        RoutineExercise.id == routine_exercise_id,
+        Routine.user_id == current_user.id
+    ).first()
+    
+
+    if not routine_exercise:
+        return jsonify({'error': 'Routine exercise not found'}), 404
+    
+    data = request.get_json()
+    
+    routine_exercise.sets = data.get('sets', routine_exercise.sets)
+    routine_exercise.reps = data.get('reps', routine_exercise.reps)
+    routine_exercise.weight = data.get('weight', routine_exercise.weight)
+    routine_exercise.notes = data.get('notes', routine_exercise.notes)
+    routine_exercise.order = data.get('order', routine_exercise.order)
+    
+    db.session.commit()
+    
+    return jsonify(routine_exercise.to_dict())
+
+# Route to remove and exercise from a routine
+@app.route('/api/routine-exercises/<int:routine_exercise_id>', methods=['DELETE'])
+@login_required
+def delete_routine_exercise(routine_exercise_id):
+    routine_exercise = RoutineExercise.query.join(Routine).filter(
+        RoutineExercise.id == routine_exercise_id,
+        Routine.user_id == current_user.id
+    ).first()
+    
+    if not routine_exercise:
+        return jsonify({'error': 'Routine exercise not found'}), 404
+    
+    db.session.delete(routine_exercise)
+    db.session.commit()
+    
+    return jsonify({'message': 'Exercise removed from routine successfully'})
