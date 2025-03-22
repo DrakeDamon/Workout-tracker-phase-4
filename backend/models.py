@@ -53,6 +53,20 @@ class Excersice(db.model):
       'muscle_group': self.muscle_group,
       'equiptment': self.equipment
     }
+  
+class Routine(db.Model):
+  __tablename__ = 'routines'
+
+
+  id = db.Column(db.Integer, primary_key=True)
+  name = db.Column(db.String(100), nullable=False)
+  day_of_week = db.Column(db.String(10))
+  description = db.Column(db.Text)
+  created_at = db.Column(db.Datetime, default= datetime.datetime.now(datetime.UTC))
+  updated_at = db.Column(db.Datetime, default=datetime.datetime.now(datetime.UTC), onupdate=datetime.datetime.now(datetime.UTC))
+  user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+  
+
 
 
   
