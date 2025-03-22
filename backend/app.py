@@ -201,38 +201,38 @@ def create_exercise():
 
 # -- Routine Exercise Routes
 # Route to add an exercise to routine
-@app.route('api/routines/<int:routine_id>/exercises', methods=['POST'])
+@app.route('/api/routines/<int:routine_id>/exercises', methods=['POST'])
 @login_required
-def add_exercise_to_routine(routine.id):
+def add_exercise_to_routine(routine_id):
     routine = Routine.query.filter_by(id=routine_id, user_id=current_user.id).first()
-
+    
     if not routine:
         return jsonify({'error': 'Routine not found'}), 404
     
     data = request.get_json()
-    exercise_id=data['exercise_id']
-
+    exercise_id = data['exercise_id']
+    
     exercise = Exercise.query.get(exercise_id)
     if not exercise:
         return jsonify({'error': 'Exercise not found'}), 404
     
-    #find highest order number for exercise (to add new one at end)
-    max_order = db.session.query(db.func.max[RoutineExercise.order]).filter_by(routine_id=routine_id).scalar() or 0
-
+    max_order = db.session.query(db.func.max(RoutineExercise.order)).filter_by(routine_id=routine_id).scalar() or 0
+    
     routine_exercise = RoutineExercise(
         routine_id=routine_id,
         exercise_id=exercise_id,
-        sets=data.get('sets', 3), 
-        reps=data.get('reps', 10), 
-        weight=data.get('weight'), 
-        notes=data.get('notes'),
-        order=max_order + 1 
+        sets=data.get('sets', 2), 
+        reps=data.get('reps', 8),
+        weight=data.get('weight'),
+        notes=data.get('notes'), 
+        order=max_order + 1  
     )
-
+    
     db.session.add(routine_exercise)
     db.session.commit()
+    
+    return jsonify(routine_exercise.to_dict()), 201
 
-    return jsonify(RoutineExercise.to_dict()), 201
 
 #Route to update an exercise in routine
 @app.route('/api/routine-exercises/<int:routine_exercise_id>', methods=['PUT'])
@@ -276,4 +276,29 @@ def delete_routine_exercise(routine_exercise_id):
     
     return jsonify({'message': 'Exercise removed from routine successfully'})
 
-# -- Utility Routes
+# -- Utility Routes --
+#Route to get a list of muscle groups
+@app.route('/api/muscle-groups', methods=['GET'])
+@login_required
+def get_muscle_groups():
+    # Get all unique muscle groups from the exercises table
+    muscle_groups = db.session.query(Exercise.muscle_group).distinct().all()
+    # Send back the list, filtering out any empty values
+    return jsonify([mg[0] for mg in muscle_groups if mg[0]])
+
+#Route to get a list of equiptment
+@app.route('/api/equipment', methods=['GET'])
+@login_required
+def get_equipment():
+    # Get all unique equipment from the exercises table
+    equipment_list = db.session.query(Exercise.equipment).distinct().all()
+    # Send back the list, filtering out any empty values
+    return jsonify([eq[0] for eq in equipment_list if eq[0]])
+
+# Start the app
+if __name__ == '__main__':
+    # Create the database tables if they don't exist
+    with app.app_context():
+        db.create_all()
+    # Run the app in debug mode (shows errors and auto-reloads on changes)
+    app.run(debug=True)
