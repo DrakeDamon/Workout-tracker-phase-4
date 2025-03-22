@@ -65,7 +65,25 @@ class Routine(db.Model):
   created_at = db.Column(db.Datetime, default= datetime.datetime.now(datetime.UTC))
   updated_at = db.Column(db.Datetime, default=datetime.datetime.now(datetime.UTC), onupdate=datetime.datetime.now(datetime.UTC))
   user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-  
+
+
+  #Relationship wiht routine exercises
+  routine_exercises = db.relationship('RoutineExercise', backref='routine', lazy=True, cascade="all, delete-orphan")
+
+  def to_dict(self):
+    return {
+      'id': self.id,
+      'name': self.name,
+      'day_of_week': self.day_of_week,
+      'description': self.description,
+      #isoformat turns into a simple string
+      'created_at': self.created_at.isoformat
+      (),
+      'updated_at': self.updated_at.isoformat(),
+      'user_id': self.user_id,
+      #turns exercies into dictionaries and puts into a list
+      'exercises': [re.to_dict() for re in self.routine_exercises]
+    }
 
 
 
