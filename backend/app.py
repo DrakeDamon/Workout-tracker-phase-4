@@ -134,6 +134,72 @@ def delete_routine(routine_id):
     return jsonify({'message': 'Routine deleted successfully'})
 
 # -- EXERCISE ROUTES --
+# Route to get a list of exercises
+@app.route('/api/exercises', methods=['GET'])
+@login_required
+def get_exercises():
+    # Get any filters from the URL (like ?muscle_group=chest or ?search=push)
+    muscle_group = request.args.get('muscle_group')
+    equipment = request.args.get('equipment')
+    search = request.args.get('search')
+    
+    # Start with all exercises
+    query = Exercise.query
+    
+    # Apply filters if provided
+    if muscle_group:
+        query = query.filter(Exercise.muscle_group == muscle_group)
+    if equipment:
+        query = query.filter(Exercise.equipment == equipment)
+    if search:
+        # Search for exercises with a name containing the search term (case-insensitive)
+        query = query.filter(Exercise.name.ilike(f'%{search}%'))
+    
+    # Get the filtered list of exercises
+    exercises = query.all()
+    # Send back the list of exercises as a JSON array
+    return jsonify([exercise.to_dict() for exercise in exercises])
+
+
+#Route to get a specific exercise
+@app.route('/api/exercises/<int:exercise_id>', methods=['GET'])
+@login_required
+def get_exercise(exercise_id):
+    # Find the exercise with the given ID
+    exercise = Exercise.query.get(exercise_id)
+    
+    # If the exercise doesn't exist, send an error
+    if not exercise:
+        return jsonify({'error': 'Exercise not found'}), 404
+    
+    # Send back the exercise's details
+    return jsonify(exercise.to_dict())
+
+# Route to create a new exercise
+# URL: /api/exercises (POST)
+# What it does: Creates a new exercise in the database
+@app.route('/api/exercises', methods=['POST'])
+@login_required
+def create_exercise():
+    # Get the data sent by the frontend
+    data = request.get_json()
+    
+    # Create a new exercise with the provided details
+    exercise = Exercise(
+        name=data['name'],  # The name is required
+        description=data.get('description'),  # Description is optional
+        muscle_group=data.get('muscle_group'),  # Muscle group is optional
+        equipment=data.get('equipment')  # Equipment is optional
+    )
+    
+    # Save the new exercise to the database
+    db.session.add(exercise)
+    db.session.commit()
+
+    return jsonify(exercise.to_dict()), 201
+
+
+# -- Routine Exercise Routes
 # Route to add an exercise to routine
 @app.route('api/routines/<int:routine_id>/exercises', methods=['POST'])
 @login_required
@@ -209,3 +275,5 @@ def delete_routine_exercise(routine_exercise_id):
     db.session.commit()
     
     return jsonify({'message': 'Exercise removed from routine successfully'})
+
+# -- Utility Routes
