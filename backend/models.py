@@ -41,3 +41,19 @@ class Excersice(db.model):
   muscle_group = db.Column(db.String(50))
   equipment = db.Column(db.String(100))
 
+  #Relationship with routine exercises
+  #one to many (first part to many to many)
+  routine_exercises = db.relationship('RoutineExercise', backref='exercise', lazy=True, cascade="all, delete-orphan")
+
+  def to_dict(self):
+    return {
+      'id': self.id,
+      'name': self.name,
+      'description': self.description,
+      'muscle_group': self.muscle_group,
+      'equiptment': self.equipment
+    }
+
+
+  
+
