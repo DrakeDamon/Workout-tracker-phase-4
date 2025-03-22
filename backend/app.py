@@ -24,15 +24,15 @@ login_manager.session_protection = "strong"
 def load_user(user_id):
     return User.query.get(int(user_id))
 
-#If a user tries to access a protected route wihtout logging in
+# If a user tries to access a protected route without logging in
 @login_manager.unauthorized_handler
 def unauthorized():
     return jsonify({'error': 'Authentication required'}), 401
 
 # Authentication routes
-#Route to log a user in
-#URL: /API/LOGIN (POST)
-#Checks username and password, logs the user in if correct
+# Route to log a user in
+# URL: /api/login (POST)
+# Checks username and password, logs the user in if correct
 @app.route('/api/login', methods=['POST'])
 def login():
     data = request.get_json()
@@ -50,17 +50,15 @@ def login():
     
     return jsonify({'error': 'Invalid credentials'}), 401
 
-
-#Logout
-# URL: /API/LOGOUT (POST)
-
+# Logout
+# URL: /api/logout (POST)
 @app.route('/api/logout', methods=['POST'])
 def logout():
     logout_user()
     return jsonify({'message': 'Logout successful'})
 
-#Check if user is logged in
-#URL: /API/CHECK-AUTH (GET)
+# Check if user is logged in
+# URL: /api/check-auth (GET)
 @app.route('/api/check-auth', methods=['GET'])
 def check_auth():
     if current_user.is_authenticated:
@@ -70,7 +68,7 @@ def check_auth():
 # -- ROUTINE ROUTES --
 # Route to get a specific routine
 # URL: /api/routines/1 (GET)
-@app.route('/api/routines/<int:routine_id>', methods=[GET])
+@app.route('/api/routines/<int:routine_id>', methods=['GET'])
 @login_required
 def get_routine(routine_id):
     routine = Routine.query.filter_by(id=routine_id, user_id=current_user.id).first()
@@ -79,9 +77,9 @@ def get_routine(routine_id):
         return jsonify({'error': 'Routine not found'}), 404
     return jsonify(routine.to_dict())
 
-#Route to create a new routine
-#URL: /API/ROUTINES (POST)
-@app.route('api/routines', methods=['POST'])
+# Route to create a new routine
+# URL: /api/routines (POST)
+@app.route('/api/routines', methods=['POST'])
 @login_required
 def create_routine():
     data = request.get_json()
@@ -98,12 +96,11 @@ def create_routine():
 
     return jsonify(routine.to_dict()), 201
 
-#Route to update a routine
-#URL: /API/ROUTINES/1 (PUT)
+# Route to update a routine
+# URL: /api/routines/1 (PUT)
 @app.route('/api/routines/<int:routine_id>', methods=['PUT'])
 @login_required
 def update_routine(routine_id):
-    
     routine = Routine.query.filter_by(id=routine_id, user_id=current_user.id).first()
 
     if not routine:
@@ -118,12 +115,12 @@ def update_routine(routine_id):
     db.session.commit()
     return jsonify(routine.to_dict())
 
-#Route to delete a routine
-#URL: /API/ROUTINES/1 (DELETE)
-@app.routes('/api/routines/<int:routine_id>', methods=['DELETE'])
+# Route to delete a routine
+# URL: /api/routines/1 (DELETE)
+@app.route('/api/routines/<int:routine_id>', methods=['DELETE'])
 @login_required
 def delete_routine(routine_id):
-    routine= Routine.query.filter_by(id=routine_id, user_id=current_user.id).first()
+    routine = Routine.query.filter_by(id=routine_id, user_id=current_user.id).first()
 
     if not routine:
         return jsonify({'error': 'Routine not found'}), 404
@@ -160,8 +157,7 @@ def get_exercises():
     # Send back the list of exercises as a JSON array
     return jsonify([exercise.to_dict() for exercise in exercises])
 
-
-#Route to get a specific exercise
+# Route to get a specific exercise
 @app.route('/api/exercises/<int:exercise_id>', methods=['GET'])
 @login_required
 def get_exercise(exercise_id):
@@ -198,7 +194,6 @@ def create_exercise():
 
     return jsonify(exercise.to_dict()), 201
 
-
 # -- Routine Exercise Routes
 # Route to add an exercise to routine
 @app.route('/api/routines/<int:routine_id>/exercises', methods=['POST'])
@@ -233,8 +228,7 @@ def add_exercise_to_routine(routine_id):
     
     return jsonify(routine_exercise.to_dict()), 201
 
-
-#Route to update an exercise in routine
+# Route to update an exercise in routine
 @app.route('/api/routine-exercises/<int:routine_exercise_id>', methods=['PUT'])
 @login_required
 def update_routine_exercise(routine_exercise_id):
@@ -243,7 +237,6 @@ def update_routine_exercise(routine_exercise_id):
         Routine.user_id == current_user.id
     ).first()
     
-
     if not routine_exercise:
         return jsonify({'error': 'Routine exercise not found'}), 404
     
@@ -259,7 +252,7 @@ def update_routine_exercise(routine_exercise_id):
     
     return jsonify(routine_exercise.to_dict())
 
-# Route to remove and exercise from a routine
+# Route to remove an exercise from a routine
 @app.route('/api/routine-exercises/<int:routine_exercise_id>', methods=['DELETE'])
 @login_required
 def delete_routine_exercise(routine_exercise_id):
@@ -277,7 +270,7 @@ def delete_routine_exercise(routine_exercise_id):
     return jsonify({'message': 'Exercise removed from routine successfully'})
 
 # -- Utility Routes --
-#Route to get a list of muscle groups
+# Route to get a list of muscle groups
 @app.route('/api/muscle-groups', methods=['GET'])
 @login_required
 def get_muscle_groups():
@@ -286,7 +279,7 @@ def get_muscle_groups():
     # Send back the list, filtering out any empty values
     return jsonify([mg[0] for mg in muscle_groups if mg[0]])
 
-#Route to get a list of equiptment
+# Route to get a list of equipment
 @app.route('/api/equipment', methods=['GET'])
 @login_required
 def get_equipment():
