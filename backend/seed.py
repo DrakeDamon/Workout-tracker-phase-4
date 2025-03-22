@@ -9,12 +9,11 @@ def seed_database():
 
         # Create a test user
         print("Creating default user...")
-        # Remove the email parameter
         user = User(username='testuser')
         user.set_password('testpassword')
         db.session.add(user)
 
-        # Create some exercises
+        # Create 10 exercises for the library
         print("Creating exercise library...")
         exercises = [
             Exercise(
@@ -40,6 +39,42 @@ def seed_database():
                 description='A compound exercise for chest',
                 muscle_group='Chest',
                 equipment='Barbell'
+            ),
+            Exercise(
+                name='Deadlift',
+                description='A compound exercise that works multiple muscle groups',
+                muscle_group='Back',
+                equipment='Barbell'
+            ),
+            Exercise(
+                name='Lat Pulldown',
+                description='An exercise for back and biceps',
+                muscle_group='Back',
+                equipment='Cable Machine'
+            ),
+            Exercise(
+                name='Leg Press',
+                description='A machine exercise for quadriceps and glutes',
+                muscle_group='Legs',
+                equipment='Machine'
+            ),
+            Exercise(
+                name='Overhead Press',
+                description='A compound exercise for shoulders',
+                muscle_group='Shoulders',
+                equipment='Barbell'
+            ),
+            Exercise(
+                name='Plank',
+                description='An isometric core exercise that improves stability',
+                muscle_group='Core',
+                equipment='None'
+            ),
+            Exercise(
+                name='Tricep Dip',
+                description='An exercise that targets the triceps',
+                muscle_group='Arms',
+                equipment='Parallel Bars'
             ),
         ]
         db.session.add_all(exercises)
@@ -95,6 +130,24 @@ def seed_database():
                 order=2
             ),
             RoutineExercise(
+                routine_id=routines[0].id,  # Upper Body
+                exercise_id=exercises[7].id,  # Overhead Press
+                sets=3,
+                reps=8,
+                weight=45.0,
+                notes='Start with just the bar if needed',
+                order=3
+            ),
+            RoutineExercise(
+                routine_id=routines[0].id,  # Upper Body
+                exercise_id=exercises[9].id,  # Tricep Dip
+                sets=3,
+                reps=10,
+                weight=None,
+                notes='Use bench for assistance if needed',
+                order=4
+            ),
+            RoutineExercise(
                 routine_id=routines[1].id,  # Lower Body
                 exercise_id=exercises[1].id,  # Squat
                 sets=4,
@@ -104,6 +157,24 @@ def seed_database():
                 order=1
             ),
             RoutineExercise(
+                routine_id=routines[1].id,  # Lower Body
+                exercise_id=exercises[6].id,  # Leg Press
+                sets=3,
+                reps=12,
+                weight=180.0,
+                notes='Focus on full range of motion',
+                order=2
+            ),
+            RoutineExercise(
+                routine_id=routines[1].id,  # Lower Body
+                exercise_id=exercises[8].id,  # Plank
+                sets=3,
+                reps=1,
+                weight=None,
+                notes='Hold for 30-60 seconds',
+                order=3
+            ),
+            RoutineExercise(
                 routine_id=routines[2].id,  # Full Body
                 exercise_id=exercises[3].id,  # Bench Press
                 sets=3,
@@ -111,6 +182,24 @@ def seed_database():
                 weight=135.0,
                 notes='Start light',
                 order=1
+            ),
+            RoutineExercise(
+                routine_id=routines[2].id,  # Full Body
+                exercise_id=exercises[4].id,  # Deadlift
+                sets=3,
+                reps=6,
+                weight=185.0,
+                notes='Focus on form and bracing core',
+                order=2
+            ),
+            RoutineExercise(
+                routine_id=routines[2].id,  # Full Body
+                exercise_id=exercises[5].id,  # Lat Pulldown
+                sets=3,
+                reps=10,
+                weight=120.0,
+                notes='Pull to upper chest',
+                order=3
             ),
         ]
         db.session.add_all(routine_exercises)
