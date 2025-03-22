@@ -4,17 +4,24 @@ from flask_login import LoginManager, login_required, login_user, logout_user, c
 from models import db, User, Routine, Exercise, RoutineExercise
 import os
 from datetime import timedelta
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///workout_tracker.db'
+# Use environment variable for database URI (for production compatibility)
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///workout_tracker.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-key-for-testing')
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=30)
-app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
-app.config['SESSION_COOKIE_SECURE'] = False  # For local HTTP
+# Production-ready session settings
+app.config['SESSION_COOKIE_SAMESITE'] = 'None'  # Required for cross-origin in production
+app.config['SESSION_COOKIE_SECURE'] = True  # Requires HTTPS in production
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 
-CORS(app, supports_credentials=True, origins=['http://localhost:3000'])  # Specific origin
+# Update CORS for production (will be updated with actual frontend domain in deployment)
+CORS(app, supports_credentials=True, origins=['http://localhost:3000'])
 
 db.init_app(app)
 login_manager = LoginManager()
@@ -70,7 +77,7 @@ def check_auth():
     return jsonify({'authenticated': False}), 200
 
 @app.route('/api/user-data', methods=['GET'])
-@login_required  # Moved outside inner function
+@login_required
 def get_user_data():
     print('Received /api/user-data request')
     print('Session cookie:', request.cookies.get('session'))
@@ -85,7 +92,6 @@ def get_user_data():
         'muscle_groups': [mg[0] for mg in muscle_groups if mg[0]],
         'equipment': [eq[0] for eq in equipment_list if eq[0]]
     })
-
 
 # Routine Routes
 @app.route('/api/routines/<int:routine_id>', methods=['GET'])
@@ -242,8 +248,127 @@ def get_equipment():
     equipment_list = db.session.query(Exercise.equipment).distinct().all()
     return jsonify([eq[0] for eq in equipment_list if eq[0]])
 
+# Database Seeding Logic
+def seed_database():
+    # Check if data already exists
+    if User.query.first() or Exercise.query.first():
+        print("Database already contains data. Skipping seeding.")
+        return
+
+    # Create a test user
+    print("Creating default user...")
+    user = User(username='testuser')
+    user.set_password('testpassword')
+    db.session.add(user)
+
+    # Create some exercises
+    print("Creating exercise library...")
+    exercises = [
+        Exercise(
+            name='Push-Up',
+            description='A bodyweight exercise for chest and triceps',
+            muscle_group='Chest',
+            equipment='None'
+        ),
+        Exercise(
+            name='Squat',
+            description='A bodyweight exercise for legs',
+            muscle_group='Legs',
+            equipment='None'
+        ),
+        Exercise(
+            name='Dumbbell Curl',
+            description='An exercise for biceps using dumbbells',
+            muscle_group='Arms',
+            equipment='Dumbbells'
+        ),
+        Exercise(
+            name='Bench Press',
+            description='A compound exercise for chest',
+            muscle_group='Chest',
+            equipment='Barbell'
+        ),
+    ]
+    db.session.add_all(exercises)
+
+    # Commit the user and exercises to get their IDs
+    db.session.commit()
+
+    # Create routines for the test user
+    print("Creating sample routines...")
+    routines = [
+        Routine(
+            name='Upper Body',
+            day_of_week='Monday',
+            description='Focus on chest, back, and arms',
+            user_id=user.id
+        ),
+        Routine(
+            name='Lower Body',
+            day_of_week='Wednesday',
+            description='Focus on legs and core',
+            user_id=user.id
+        ),
+        Routine(
+            name='Full Body',
+            day_of_week='Friday',
+            description='Work all major muscle groups',
+            user_id=user.id
+        ),
+    ]
+    db.session.add_all(routines)
+
+    # Commit the routines to get their IDs
+    db.session.commit()
+
+    # Create some routine exercises
+    routine_exercises = [
+        RoutineExercise(
+            routine_id=routines[0].id,  # Upper Body
+            exercise_id=exercises[0].id,  # Push-Up
+            sets=3,
+            reps=10,
+            weight=None,
+            notes='Focus on form',
+            order=1
+        ),
+        RoutineExercise(
+            routine_id=routines[0].id,  # Upper Body
+            exercise_id=exercises[2].id,  # Dumbbell Curl
+            sets=3,
+            reps=12,
+            weight=20.0,
+            notes='Use moderate weight',
+            order=2
+        ),
+        RoutineExercise(
+            routine_id=routines[1].id,  # Lower Body
+            exercise_id=exercises[1].id,  # Squat
+            sets=4,
+            reps=8,
+            weight=None,
+            notes='Bodyweight only',
+            order=1
+        ),
+        RoutineExercise(
+            routine_id=routines[2].id,  # Full Body
+            exercise_id=exercises[3].id,  # Bench Press
+            sets=3,
+            reps=8,
+            weight=135.0,
+            notes='Start light',
+            order=1
+        ),
+    ]
+    db.session.add_all(routine_exercises)
+
+    # Final commit
+    db.session.commit()
+    print("Database seeded successfully!")
+
 # Start the app
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
-    app.run(debug=True, port=5555)
+        seed_database()
+    app.run(debug=True, host='localhost', port=5555)
