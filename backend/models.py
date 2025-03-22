@@ -84,6 +84,18 @@ class Routine(db.Model):
       #turns exercies into dictionaries and puts into a list
       'exercises': [re.to_dict() for re in self.routine_exercises]
     }
+  
+class RoutineExercise(db.Model):
+  __tablename__ = 'routine_exercises'
+
+  id = db.Column(db.Integer, primary_key=True)
+  routine_id = db.Column(db.Integer, db.ForeignKey('routines.id'), nullable=False)
+  exercise_id = db.Column(db.Integer, db.ForeignKey('exercise.id'), nullable=False)
+  sets = db.Column(db.Integer, default= 2)
+  reps = db.Column(db.Integer, default=8)
+  weight = db.Column(db.Float)
+  notes = db.Column(db.Text)
+  order = db.Column(db.Integer)
 
 
 
