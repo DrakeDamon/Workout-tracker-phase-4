@@ -24,6 +24,22 @@ class User(db.Model):
             'username': self.username
         }
 
+    # Flask-Login required methods
+    @property
+    def is_authenticated(self):
+        return True
+
+    @property
+    def is_active(self):
+        return True
+
+    @property
+    def is_anonymous(self):
+        return False
+
+    def get_id(self):
+        return str(self.id)
+
 class Exercise(db.Model):
     __tablename__ = 'exercises'
 
