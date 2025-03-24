@@ -186,7 +186,7 @@ def seed_database():
             RoutineExercise(
                 routine_id=routines[2].id,  # Full Body
                 exercise_id=exercises[4].id,  # Deadlift
-                sets=3,
+                sets=4,
                 reps=6,
                 weight=185.0,
                 notes='Focus on form and bracing core',
