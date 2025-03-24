@@ -1,0 +1,95 @@
+/* frontend/src/styles/ExerciseBrowser.css */
+.exercise-browser-container {
+  padding: 20px;
+  max-width: 1200px;
+  margin: 20px auto;
+}
+
+.exercise-browser-header h1 {
+  color: #333;
+  margin-bottom: 20px;
+}
+
+.filter-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  margin-bottom: 20px;
+  align-items: center;
+}
+
+.search-box {
+  flex: 1;
+  min-width: 300px;
+  display: flex;
+  gap: 10px;
+}
+
+.search-input,
+.filter-select,
+.form-control {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.routine-select {
+  min-width: 200px;
+}
+
+.add-options {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.exercise-results {
+  margin-top: 20px;
+}
+
+.no-exercises {
+  text-align: center;
+  color: #666;
+}
+
+.exercise-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 20px;
+}
+
+.exercise-browser-footer {
+  margin-top: 20px;
+  text-align: center;
+}
+
+.btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.btn-secondary {
+  background-color: #6c757d;
+  color: white;
+}
+
+.btn-secondary:hover {
+  background-color: #5a6268;
+}
+
+.btn-link {
+  color: #007bff;
+  text-decoration: none;
+}
+
+.btn-link:hover {
+  text-decoration: underline;
+}
+
+.loading {
+  text-align: center;
+  font-size: 1.2em;
+}
