@@ -1,8 +1,7 @@
-// pages/Login.js
+// frontend/src/pages/Login.js
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
-import api from '../services/api';
 import '../styles/Login.css';
 
 const Login = () => {
@@ -33,20 +32,18 @@ const Login = () => {
       console.log('Attempting login with:', formData);
       
       if (debugMode) {
-        // Try a direct API call for debugging
+        // For debugging, don't actually redirect
         try {
-          console.log('Testing direct API call...');
-          const response = await api.login(formData.username, formData.password);
+          const success = await login(formData.username, formData.password);
           setDebugInfo({
-            status: 'Direct API call successful',
-            data: response
+            status: 'Login attempt successful',
+            result: success ? 'Logged in' : 'Login failed'
           });
-          console.log('Direct API call response:', response);
-        } catch (apiError) {
-          console.error('Direct API call failed:', apiError);
+        } catch (error) {
+          console.error('Login debug error:', error);
           setDebugInfo({
-            status: 'Direct API call failed',
-            error: apiError.message || JSON.stringify(apiError)
+            status: 'Login attempt failed',
+            error: error.message || JSON.stringify(error)
           });
         }
       } else {
@@ -137,7 +134,7 @@ const Login = () => {
             {debugInfo && (
               <div className="debug-info">
                 <h4>{debugInfo.status}</h4>
-                <pre>{JSON.stringify(debugInfo.data || debugInfo.error, null, 2)}</pre>
+                <pre>{JSON.stringify(debugInfo.result || debugInfo.error, null, 2)}</pre>
               </div>
             )}
           </div>
