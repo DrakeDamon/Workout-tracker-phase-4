@@ -358,6 +358,22 @@ export const AppProvider = ({ children }) => {
     }
   };
 
+  const createExercise = async (exerciseData) => {
+    setLoading('submission', true);
+    try {
+      const newExercise = await api.createExercise(exerciseData);
+      setExercises([...exercises, newExercise]);
+      clearError('form');
+      return newExercise;
+    } catch (err) {
+      console.error('Error creating exercise:', err);
+      setError('form', err.error || 'Failed to create exercise');
+      return null;
+    } finally {
+      setLoading('submission', false);
+    }
+  };  
+
   // Helper function for handling form submissions with state management
   const handleFormSubmission = async (actionFn, ...args) => {
     setLoading('submission', true);
@@ -430,6 +446,7 @@ export const AppProvider = ({ children }) => {
     createRoutine,
     updateRoutine,
     deleteRoutine,
+    createExercise,
     addExerciseToRoutine,
     updateRoutineExercise,
     deleteRoutineExercise,
