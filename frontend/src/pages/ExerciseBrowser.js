@@ -5,9 +5,13 @@ import ExerciseCard from '../components/Exercises/ExerciseCard';
 import '../styles/ExerciseBrowser.css';
 
 const ExerciseBrowser = () => {
-  const { exercises, loading, error } = useAppContext();
+  const { exercises, isLoading, errors } = useAppContext();
   const [search, setSearch] = useState('');
   const [filteredExercises, setFilteredExercises] = useState([]);
+
+  // Get specific loading and error states
+  const isUserDataLoading = isLoading.userData;
+  const userDataError = errors.userData;
 
   // Update local filteredExercises based on search
   useEffect(() => {
@@ -26,15 +30,11 @@ const ExerciseBrowser = () => {
     setSearch(e.target.value);
   };
 
-  const handleAddExercise = async (exerciseId) => {
-    alert('Routine selection is not implemented in this version');
-  };
-
   const handleClearSearch = () => {
     setSearch('');
   };
 
-  if (loading) {
+  if (isUserDataLoading) {
     return <div className="exercise-browser-container loading">Loading exercises...</div>;
   }
 
@@ -42,6 +42,12 @@ const ExerciseBrowser = () => {
     <div className="exercise-browser-container">
       <div className="exercise-browser-header">
         <h1>Exercise Library</h1>
+      </div>
+
+      <div className="action-buttons">
+        <Link to="/create-exercise" className="btn btn-primary">
+          Create New Exercise
+        </Link>
       </div>
 
       <div className="filter-controls">
@@ -53,15 +59,20 @@ const ExerciseBrowser = () => {
             onChange={handleSearchChange}
             className="search-input"
           />
+          {search && (
+            <button onClick={handleClearSearch} className="clear-search-btn">
+              Clear
+            </button>
+          )}
         </div>
       </div>
 
       <div className="exercise-results">
-        {error && <div className="error-message">{error}</div>}
-        {filteredExercises.length === 0 && !error ? (
+        {userDataError && <div className="error-message">{userDataError}</div>}
+        {filteredExercises.length === 0 && !userDataError ? (
           <div className="no-exercises">
             <p>No exercises found with the current filters.</p>
-            <p>Try adjusting your search or filters.</p>
+            <p>Try adjusting your search or create a new exercise.</p>
           </div>
         ) : (
           <div className="exercise-grid">
@@ -69,7 +80,6 @@ const ExerciseBrowser = () => {
               <ExerciseCard
                 key={exercise.id}
                 exercise={exercise}
-                onAdd={() => handleAddExercise(exercise.id)}
               />
             ))}
           </div>
