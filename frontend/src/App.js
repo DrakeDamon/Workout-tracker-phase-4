@@ -7,6 +7,7 @@ import CreateRoutine from './pages/CreateRoutine';
 import EditRoutine from './pages/EditRoutine';
 import ExerciseBrowser from './pages/ExerciseBrowser';
 import RoutineDetail from './pages/RoutineDetail';
+import CreateExercise from './pages/CreateExercise';
 
 function App() {
   return (
@@ -17,6 +18,7 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/exercise-browser" element={<ExerciseBrowser />} />
           <Route path="/create-routine" element={<CreateRoutine />} />
+          <Route path="/create-exercise" element={<CreateExercise />} />
           <Route path="/edit-routine/:routineId" element={<EditRoutine />} />
           <Route path="/routine/:routineId" element={<RoutineDetail />} />
         </Routes>
