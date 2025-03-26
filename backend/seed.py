@@ -1,20 +1,18 @@
 from app import app, db
-from models import User, Routine, Exercise, RoutineExercise
+from models import Exercise, Routine, RoutineExercise
 
 def seed_database():
+    """Seed the database with initial data"""
     with app.app_context():
-        # Clear existing data (optional, comment out if you want to keep existing data)
-        db.drop_all()
-        db.create_all()
-
-        # Create a test user
-        print("Creating default user...")
-        user = User(username='testuser')
-        user.set_password('testpassword')
-        db.session.add(user)
-
-        # Create 10 exercises for the library
-        print("Creating exercise library...")
+        print("Seeding database...")
+        
+        db.session.query(RoutineExercise).delete()
+        db.session.query(Exercise).delete()
+        db.session.query(Routine).delete()
+        db.session.commit()
+        
+        print("Creating exercises...")
+        # Create exercises
         exercises = [
             Exercise(
                 name='Push-Up',
@@ -78,41 +76,36 @@ def seed_database():
             ),
         ]
         db.session.add_all(exercises)
-
-        # Commit the user and exercises to get their IDs
         db.session.commit()
-
-        # Create routines for the test user
-        print("Creating sample routines...")
+        
+        print("Creating routines...")
+        # Create routines
         routines = [
             Routine(
                 name='Upper Body',
                 day_of_week='Monday',
-                description='Focus on chest, back, and arms',
-                user_id=user.id
+                description='Focus on chest, back, and arms'
             ),
             Routine(
                 name='Lower Body',
                 day_of_week='Wednesday',
-                description='Focus on legs and core',
-                user_id=user.id
+                description='Focus on legs and core'
             ),
             Routine(
                 name='Full Body',
                 day_of_week='Friday',
-                description='Work all major muscle groups',
-                user_id=user.id
+                description='Work all major muscle groups'
             ),
         ]
         db.session.add_all(routines)
-
-        # Commit the routines to get their IDs
         db.session.commit()
-
-        # Create some routine exercises
+        
+        print("Adding exercises to routines...")
+        # Add exercises to routines
         routine_exercises = [
+            # Upper Body routine
             RoutineExercise(
-                routine_id=routines[0].id,  # Upper Body
+                routine_id=routines[0].id,
                 exercise_id=exercises[0].id,  # Push-Up
                 sets=3,
                 reps=10,
@@ -121,7 +114,7 @@ def seed_database():
                 order=1
             ),
             RoutineExercise(
-                routine_id=routines[0].id,  # Upper Body
+                routine_id=routines[0].id,
                 exercise_id=exercises[2].id,  # Dumbbell Curl
                 sets=3,
                 reps=12,
@@ -130,7 +123,7 @@ def seed_database():
                 order=2
             ),
             RoutineExercise(
-                routine_id=routines[0].id,  # Upper Body
+                routine_id=routines[0].id,
                 exercise_id=exercises[7].id,  # Overhead Press
                 sets=3,
                 reps=8,
@@ -139,7 +132,7 @@ def seed_database():
                 order=3
             ),
             RoutineExercise(
-                routine_id=routines[0].id,  # Upper Body
+                routine_id=routines[0].id,
                 exercise_id=exercises[9].id,  # Tricep Dip
                 sets=3,
                 reps=10,
@@ -147,8 +140,10 @@ def seed_database():
                 notes='Use bench for assistance if needed',
                 order=4
             ),
+            
+            # Lower Body routine
             RoutineExercise(
-                routine_id=routines[1].id,  # Lower Body
+                routine_id=routines[1].id,
                 exercise_id=exercises[1].id,  # Squat
                 sets=4,
                 reps=8,
@@ -157,7 +152,7 @@ def seed_database():
                 order=1
             ),
             RoutineExercise(
-                routine_id=routines[1].id,  # Lower Body
+                routine_id=routines[1].id,
                 exercise_id=exercises[6].id,  # Leg Press
                 sets=3,
                 reps=12,
@@ -166,7 +161,7 @@ def seed_database():
                 order=2
             ),
             RoutineExercise(
-                routine_id=routines[1].id,  # Lower Body
+                routine_id=routines[1].id,
                 exercise_id=exercises[8].id,  # Plank
                 sets=3,
                 reps=1,
@@ -174,8 +169,10 @@ def seed_database():
                 notes='Hold for 30-60 seconds',
                 order=3
             ),
+            
+            # Full Body routine
             RoutineExercise(
-                routine_id=routines[2].id,  # Full Body
+                routine_id=routines[2].id,
                 exercise_id=exercises[3].id,  # Bench Press
                 sets=3,
                 reps=8,
@@ -184,7 +181,7 @@ def seed_database():
                 order=1
             ),
             RoutineExercise(
-                routine_id=routines[2].id,  # Full Body
+                routine_id=routines[2].id,
                 exercise_id=exercises[4].id,  # Deadlift
                 sets=4,
                 reps=6,
@@ -193,7 +190,7 @@ def seed_database():
                 order=2
             ),
             RoutineExercise(
-                routine_id=routines[2].id,  # Full Body
+                routine_id=routines[2].id,
                 exercise_id=exercises[5].id,  # Lat Pulldown
                 sets=3,
                 reps=10,
@@ -203,9 +200,8 @@ def seed_database():
             ),
         ]
         db.session.add_all(routine_exercises)
-
-        # Final commit
         db.session.commit()
+        
         print("Database seeded successfully!")
 
 if __name__ == '__main__':

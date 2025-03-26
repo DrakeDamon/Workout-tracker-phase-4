@@ -3,13 +3,13 @@ const API_BASE_URL = 'http://localhost:5555';
 
 // Helper function for fetch requests
 const fetchWithRetry = async (url, options = {}, retries = 1) => {
+
   try {
-    // Add logging to debug
     console.log('Attempting fetch to:', url);
-    
     const response = await fetch(url, {
       ...options,
-      credentials: 'include',  // This is important for cookies/session
+      credentials: 'include',  // This is crucial for sending/receiving cookies
+      mode: 'cors',            // Explicitly set CORS mode
       headers: {
         'Content-Type': 'application/json',
         ...options.headers,
