@@ -44,12 +44,15 @@ class Exercise(db.Model):
     __tablename__ = 'exercises'
 
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False)  # Changed to nullable=False
+    name = db.Column(db.String(100), nullable=False)
     description = db.Column(db.Text)
     muscle_group = db.Column(db.String(50))
     equipment = db.Column(db.String(100))
 
-    routine_exercises = db.relationship('RoutineExercise', backref='exercise', lazy=True, cascade="all, delete-orphan")
+    # Define the relationship to RoutineExercise
+    routine_exercises = db.relationship('RoutineExercise', backref='exercise', lazy=True)
+
+    serialize_rules = ('-routine_exercises.exercise',)
 
     def to_dict(self):
         return {
@@ -57,7 +60,7 @@ class Exercise(db.Model):
             'name': self.name,
             'description': self.description,
             'muscle_group': self.muscle_group,
-            'equipment': self.equipment  # Fixed typo
+            'equipment': self.equipment
         }
 
 class Routine(db.Model):
@@ -71,7 +74,10 @@ class Routine(db.Model):
     updated_at = db.Column(db.DateTime, onupdate=lambda: datetime.now(timezone.utc))
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
 
+    # Define the relationship to RoutineExercise
     routine_exercises = db.relationship('RoutineExercise', backref='routine', lazy=True, cascade="all, delete-orphan")
+
+    serialize_rules = ('-routine_exercises.routine', '-user')
 
     def to_dict(self):
         return {
@@ -82,7 +88,7 @@ class Routine(db.Model):
             'created_at': self.created_at.isoformat(),
             'updated_at': self.updated_at.isoformat() if self.updated_at else None,
             'user_id': self.user_id,
-            'routine_exercises': [re.to_dict() for re in self.routine_exercises]  # Renamed for clarity
+            'routine_exercises': [re.to_dict() for re in self.routine_exercises]
         }
 
 class RoutineExercise(db.Model):
@@ -96,11 +102,13 @@ class RoutineExercise(db.Model):
     weight = db.Column(db.Float)
     notes = db.Column(db.Text)
     order = db.Column(db.Integer)
-
+    
+    # Explicit relationship declarations
+    # These replace the need for routine_exercises in other models
     routines = db.relationship('Routine', backref='routinexercises', cascade="all, delete-orphan")
-    exercises = db.relationship('Exercise', backref='routinexercises', cascade="all, delete-orphan")
-
-    serialize_rules = ('-routines.routineexercises', '-exercises.routineexercises')
+    exercises = db.relationship('Exercise', backref='routinexercises')
+    
+    serialize_rules = ('-routines.routinexercises', '-exercises.routinexercises')
 
     def to_dict(self):
         return {
