@@ -57,12 +57,14 @@ def home():
     })
 
 # Define API Resources
+#Get Routine list
 class RoutineListResource(Resource):
     def get(self):
         """Get all routines"""
         routines = Routine.query.all()
         return [routine.to_dict() for routine in routines], 200
-    
+
+#Create Routine  
     def post(self):
         """Create a new routine"""
         data = request.get_json()
@@ -88,6 +90,7 @@ class RoutineListResource(Resource):
             db.session.rollback()
             return {"error": "An error occurred while creating the routine"}, 500
 
+#Get speficic routines
 class RoutineResource(Resource):
     def get(self, routine_id):
         """Get a specific routine"""
@@ -96,7 +99,8 @@ class RoutineResource(Resource):
             return {"error": "Routine not found"}, 404
         
         return routine.to_dict(), 200
-    
+
+#Update routines
     def put(self, routine_id):
         """Update a specific routine"""
         routine = Routine.query.get(routine_id)
@@ -121,7 +125,9 @@ class RoutineResource(Resource):
         except Exception as e:
             db.session.rollback()
             return {"error": "An error occurred while updating the routine"}, 500
-    
+
+
+#Delete routines       
     def delete(self, routine_id):
         """Delete a specific routine"""
         routine = Routine.query.get(routine_id)
@@ -136,6 +142,8 @@ class RoutineResource(Resource):
             db.session.rollback()
             return {"error": "An error occurred while deleting the routine"}, 500
 
+
+#Get Exercise list
 class ExerciseListResource(Resource):
     def get(self):
         """Get all exercises with optional filtering"""
@@ -160,7 +168,8 @@ class ExerciseListResource(Resource):
         # Execute query and return results
         exercises = query.all()
         return [exercise.to_dict() for exercise in exercises], 200
-    
+
+#Create new exercise
     def post(self):
         """Create a new exercise"""
         data = request.get_json()
@@ -187,6 +196,8 @@ class ExerciseListResource(Resource):
             db.session.rollback()
             return {"error": "An error occurred while creating the exercise"}, 500
 
+
+#Get specific exercise
 class ExerciseResource(Resource):
     def get(self, exercise_id):
         """Get a specific exercise"""
@@ -195,6 +206,7 @@ class ExerciseResource(Resource):
             return {"error": "Exercise not found"}, 404
         
         return exercise.to_dict(), 200
+
 
 class RoutineExerciseResource(Resource):
     def post(self, routine_id):

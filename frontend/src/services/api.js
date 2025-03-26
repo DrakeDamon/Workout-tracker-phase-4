@@ -1,27 +1,20 @@
-// frontend/src/services/api.js
-const API_BASE_URL = 'http://localhost:5555';
+// Base API URL from environment or default to localhost:5555
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5555';
 
 // Helper function for fetch requests
-const fetchWithRetry = async (url, options = {}, retries = 1) => {
-
+const fetchWithErrorHandling = async (url, options = {}) => {
   try {
-    console.log('Attempting fetch to:', url);
     const response = await fetch(url, {
       ...options,
-      credentials: 'include',  // This is crucial for sending/receiving cookies
-      mode: 'cors',            // Explicitly set CORS mode
       headers: {
         'Content-Type': 'application/json',
         ...options.headers,
       },
     });
-    
-    console.log('Response status:', response.status);
 
-    // Check if response is not ok (status outside the range 200-299)
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      const error = new Error(errorData.error || `HTTP Error: ${response.status}`);
+      const error = new Error(errorData.error || `HTTP error! status: ${response.status}`);
       error.status = response.status;
       error.data = errorData;
       throw error;
@@ -35,201 +28,107 @@ const fetchWithRetry = async (url, options = {}, retries = 1) => {
     
     return {};
   } catch (error) {
-    console.error('Fetch error:', error);
-    
-    // If we have a network error and retries left, try again after a delay
-    if ((error.name === 'TypeError' || error.message === 'Failed to fetch') && retries > 0) {
-      console.warn('Network error detected, retrying request...');
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      return fetchWithRetry(url, options, retries - 1);
-    }
+    console.error('API Error:', error);
     throw error;
   }
 };
 
 // API methods
 const api = {
-  // Authentication Routes
-  checkAuth: async () => {
-    try {
-      return await fetchWithRetry(`${API_BASE_URL}/api/check-auth`);
-    } catch (error) {
-      if (error.status === 401) {
-        return { authenticated: false };
-      }
-      throw error;
-    }
-  },
-
-  login: async (username, password) => {
-    try {
-      return await fetchWithRetry(`${API_BASE_URL}/api/login`, {
-        method: 'POST',
-        body: JSON.stringify({ username, password }),
-      });
-    } catch (error) {
-      throw error;
-    }
-  },
-
-  logout: async () => {
-    try {
-      return await fetchWithRetry(`${API_BASE_URL}/api/logout`, {
-        method: 'POST',
-      });
-    } catch (error) {
-      throw error;
-    }
-  },
-
-  // User Data Route
+  // GET all data at once (user data, routines, exercises, etc.)
   getUserData: async () => {
-    try {
-      return await fetchWithRetry(`${API_BASE_URL}/api/user-data`);
-    } catch (error) {
-      console.error('Error fetching user data:', error);
-      throw error;
-    }
+    return fetchWithErrorHandling(`${API_BASE_URL}/api/user-data`);
   },
 
-  // Routine Routes
+  // Routine endpoints
+  getRoutines: async () => {
+    return fetchWithErrorHandling(`${API_BASE_URL}/api/routines`);
+  },
+
   getRoutine: async (routineId) => {
-    try {
-      console.log(`Fetching routine with ID: ${routineId}`);
-      return await fetchWithRetry(`${API_BASE_URL}/api/routines/${routineId}`);
-    } catch (error) {
-      console.error(`Error fetching routine ${routineId}:`, error);
-      if (error.name === 'TypeError' || error.message === 'Failed to fetch') {
-        throw new Error('Network error: Please check your connection and try again.');
-      }
-      throw error;
-    }
+    return fetchWithErrorHandling(`${API_BASE_URL}/api/routines/${routineId}`);
   },
 
   createRoutine: async (routineData) => {
-    try {
-      return await fetchWithRetry(`${API_BASE_URL}/api/routines`, {
-        method: 'POST',
-        body: JSON.stringify(routineData),
-      });
-    } catch (error) {
-      console.error('Error creating routine:', error);
-      throw error;
-    }
+    return fetchWithErrorHandling(`${API_BASE_URL}/api/routines`, {
+      method: 'POST',
+      body: JSON.stringify(routineData),
+    });
   },
 
   updateRoutine: async (routineId, routineData) => {
-    try {
-      return await fetchWithRetry(`${API_BASE_URL}/api/routines/${routineId}`, {
-        method: 'PUT',
-        body: JSON.stringify(routineData),
-      });
-    } catch (error) {
-      console.error(`Error updating routine ${routineId}:`, error);
-      throw error;
-    }
+    return fetchWithErrorHandling(`${API_BASE_URL}/api/routines/${routineId}`, {
+      method: 'PUT',
+      body: JSON.stringify(routineData),
+    });
   },
 
   deleteRoutine: async (routineId) => {
-    try {
-      return await fetchWithRetry(`${API_BASE_URL}/api/routines/${routineId}`, {
-        method: 'DELETE',
-      });
-    } catch (error) {
-      console.error(`Error deleting routine ${routineId}:`, error);
-      throw error;
-    }
+    return fetchWithErrorHandling(`${API_BASE_URL}/api/routines/${routineId}`, {
+      method: 'DELETE',
+    });
   },
 
-  // Exercise Routes
+  // Exercise endpoints
   getExercises: async (filters = {}) => {
-    try {
-      const queryParams = new URLSearchParams();
-      Object.entries(filters).forEach(([key, value]) => {
-        if (value) queryParams.append(key, value);
-      });
-      
-      const url = `${API_BASE_URL}/api/exercises${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
-      return await fetchWithRetry(url);
-    } catch (error) {
-      console.error('Error fetching exercises:', error);
-      throw error;
-    }
+    const queryParams = new URLSearchParams();
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value) queryParams.append(key, value);
+    });
+    
+    const url = `${API_BASE_URL}/api/exercises${queryParams.toString() ? `?${queryParams}` : ''}`;
+    return fetchWithErrorHandling(url);
   },
 
   getExercise: async (exerciseId) => {
-    try {
-      return await fetchWithRetry(`${API_BASE_URL}/api/exercises/${exerciseId}`);
-    } catch (error) {
-      throw error;
-    }
+    return fetchWithErrorHandling(`${API_BASE_URL}/api/exercises/${exerciseId}`);
   },
 
   createExercise: async (exerciseData) => {
-    try {
-      console.log('Creating new exercise:', exerciseData);
-      return await fetchWithRetry(`${API_BASE_URL}/api/exercises`, {
-        method: 'POST',
-        body: JSON.stringify(exerciseData),
-      });
-    } catch (error) {
-      console.error('Error creating exercise:', error);
-      throw error;
-    }
+    return fetchWithErrorHandling(`${API_BASE_URL}/api/exercises`, {
+      method: 'POST',
+      body: JSON.stringify(exerciseData),
+    });
   },
 
-  // Routine Exercise Routes
+  // Routine Exercise endpoints
   addExerciseToRoutine: async (routineId, exerciseData) => {
-    try {
-      return await fetchWithRetry(`${API_BASE_URL}/api/routines/${routineId}/exercises`, {
-        method: 'POST',
-        body: JSON.stringify(exerciseData),
-      });
-    } catch (error) {
-      console.error('Error adding exercise to routine:', error);
-      throw error;
-    }
+    return fetchWithErrorHandling(`${API_BASE_URL}/api/routines/${routineId}/exercises`, {
+      method: 'POST',
+      body: JSON.stringify(exerciseData),
+    });
   },
 
-  updateRoutineExercise: async (routineExerciseId, exerciseData) => {
-    try {
-      return await fetchWithRetry(`${API_BASE_URL}/api/routine-exercises/${routineExerciseId}`, {
-        method: 'PUT',
-        body: JSON.stringify(exerciseData),
-      });
-    } catch (error) {
-      console.error('Error updating routine exercise:', error);
-      throw error;
-    }
+  updateRoutineExercise: async (routineExerciseId, data) => {
+    return fetchWithErrorHandling(`${API_BASE_URL}/api/routine-exercises/${routineExerciseId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
   },
 
   deleteRoutineExercise: async (routineExerciseId) => {
-    try {
-      return await fetchWithRetry(`${API_BASE_URL}/api/routine-exercises/${routineExerciseId}`, {
-        method: 'DELETE',
-      });
-    } catch (error) {
-      console.error('Error deleting routine exercise:', error);
-      throw error;
-    }
+    return fetchWithErrorHandling(`${API_BASE_URL}/api/routine-exercises/${routineExerciseId}`, {
+      method: 'DELETE',
+    });
   },
 
-  // Utility Routes
-  getMuscleGroups: async () => {
-    try {
-      return await fetchWithRetry(`${API_BASE_URL}/api/muscle-groups`);
-    } catch (error) {
-      throw error;
-    }
+  // Authentication
+  login: async (username, password) => {
+    return fetchWithErrorHandling(`${API_BASE_URL}/api/login`, {
+      method: 'POST',
+      body: JSON.stringify({ username, password }),
+    });
   },
 
-  getEquipment: async () => {
-    try {
-      return await fetchWithRetry(`${API_BASE_URL}/api/equipment`);
-    } catch (error) {
-      throw error;
-    }
+  logout: async () => {
+    return fetchWithErrorHandling(`${API_BASE_URL}/api/logout`, {
+      method: 'POST',
+    });
   },
+
+  checkAuth: async () => {
+    return fetchWithErrorHandling(`${API_BASE_URL}/api/check-auth`);
+  }
 };
 
 export default api;
