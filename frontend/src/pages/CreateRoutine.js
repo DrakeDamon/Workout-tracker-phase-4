@@ -77,7 +77,7 @@ const CreateRoutine = () => {
       }
       
       // Step 3: Navigate to the new routine
-      navigate(`/routines/${newRoutine.id}`);
+      navigate('/');
     } catch (err) {
       console.error('Form submission error:', err);
       // Errors will be handled by the context and shown in the UI

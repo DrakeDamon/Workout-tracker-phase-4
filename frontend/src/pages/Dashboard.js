@@ -12,7 +12,13 @@ const Dashboard = () => {
     errors, 
     fetchUserData
   } = useAppContext();
-  
+  useEffect(() => {
+
+    // Refresh user data including routines
+
+    fetchUserData();
+
+  }, []); 
   useEffect(() => {
     // Check if we need to refresh data
     if (routines.length === 0 && !isLoading.userData) {
