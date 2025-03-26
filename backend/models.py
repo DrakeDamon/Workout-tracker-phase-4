@@ -10,19 +10,16 @@ class User(db.Model):
     username = db.Column(db.String(80), unique=True, nullable=False)
     password_hash = db.Column(db.String(128), nullable=False)
 
-    routines = db.relationship('Routine', backref='user', lazy=True, cascade="all, delete-orphan")
+    # One-to-many relationship with Routine
+    routines = db.relationship('Routine', backref='owner', lazy=True, cascade="all, delete-orphan")
+
+    serialize_rules = ('-routines.owner',)
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
 
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
-
-    def to_dict(self):
-        return {
-            'id': self.id,
-            'username': self.username
-        }
 
     # Flask-Login required methods
     @property
@@ -49,19 +46,10 @@ class Exercise(db.Model):
     muscle_group = db.Column(db.String(50))
     equipment = db.Column(db.String(100))
 
-    # Define the relationship to RoutineExercise
+    # Relationship with RoutineExercise
     routine_exercises = db.relationship('RoutineExercise', backref='exercise', lazy=True)
 
     serialize_rules = ('-routine_exercises.exercise',)
-
-    def to_dict(self):
-        return {
-            'id': self.id,
-            'name': self.name,
-            'description': self.description,
-            'muscle_group': self.muscle_group,
-            'equipment': self.equipment
-        }
 
 class Routine(db.Model):
     __tablename__ = 'routines'
@@ -74,22 +62,10 @@ class Routine(db.Model):
     updated_at = db.Column(db.DateTime, onupdate=lambda: datetime.now(timezone.utc))
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
 
-    # Define the relationship to RoutineExercise
+    # Relationship with RoutineExercise
     routine_exercises = db.relationship('RoutineExercise', backref='routine', lazy=True, cascade="all, delete-orphan")
 
-    serialize_rules = ('-routine_exercises.routine', '-user')
-
-    def to_dict(self):
-        return {
-            'id': self.id,
-            'name': self.name,
-            'day_of_week': self.day_of_week,
-            'description': self.description,
-            'created_at': self.created_at.isoformat(),
-            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
-            'user_id': self.user_id,
-            'routine_exercises': [re.to_dict() for re in self.routine_exercises]
-        }
+    serialize_rules = ('-routine_exercises.routine', '-owner')
 
 class RoutineExercise(db.Model):
     __tablename__ = 'routine_exercises'
@@ -103,22 +79,4 @@ class RoutineExercise(db.Model):
     notes = db.Column(db.Text)
     order = db.Column(db.Integer)
     
-    # Explicit relationship declarations
-    # These replace the need for routine_exercises in other models
-    routines = db.relationship('Routine', backref='routinexercises', cascade="all, delete-orphan")
-    exercises = db.relationship('Exercise', backref='routinexercises')
-    
-    serialize_rules = ('-routines.routinexercises', '-exercises.routinexercises')
-
-    def to_dict(self):
-        return {
-            'id': self.id,
-            'routine_id': self.routine_id,
-            'exercise_id': self.exercise_id,
-            'exercise': self.exercise.to_dict(),
-            'sets': self.sets,
-            'reps': self.reps,
-            'weight': self.weight,
-            'notes': self.notes,
-            'order': self.order
-        }
+    serialize_rules = ('-routine.routine_exercises', '-exercise.routine_exercises')

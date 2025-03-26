@@ -1,8 +1,8 @@
 // frontend/src/pages/CreateExercise.js
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useAppContext } from '../context/AppContext';
-import '../styles/ExerciseForm.css';
+import { useAppContext } from '../../context/AppContext';
+import '../../styles/CreateExercise.css';
 
 const muscleGroups = [
   'Chest', 'Back', 'Legs', 'Arms', 'Shoulders', 'Core', 'Full Body'
@@ -15,8 +15,9 @@ const equipmentTypes = [
 
 const CreateExercise = () => {
   const navigate = useNavigate();
-  const { isAuthenticated, createExercise, isLoading, errors, clearError } = useAppContext();
+  const { isAuthenticated, createExercise, isLoading } = useAppContext();
   
+  // Local form state only - no duplicate API calls or state management
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -24,19 +25,15 @@ const CreateExercise = () => {
     equipment: ''
   });
   
-  // Get specific loading and error states
-  const isSubmitting = isLoading.submission;
-  const formError = errors.form;
+  // Simple loading state from context
+  const isSubmitting = isLoading?.submission || false;
   
   // Redirect to login if not authenticated
   useEffect(() => {
     if (!isAuthenticated) {
       navigate('/login');
     }
-    
-    // Clear form errors when component unmounts
-    return () => clearError('form');
-  }, [isAuthenticated, navigate, clearError]);
+  }, [isAuthenticated, navigate]);
   
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -48,14 +45,20 @@ const CreateExercise = () => {
     
     try {
       // Create the exercise using the context method
-      await createExercise(formData);
+      const result = await createExercise(formData);
       
-      // Navigate to exercise browser on success
-      navigate('/exercise-browser');
+      if (result) {
+        // Navigate to dashboard on success
+        navigate('/');
+      }
     } catch (error) {
       console.error('Error creating exercise:', error);
-      // Error handling is done by the context
     }
+  };
+
+  const handleCancel = () => {
+    // Navigate back to dashboard
+    navigate('/');
   };
   
   return (
@@ -127,14 +130,15 @@ const CreateExercise = () => {
           />
         </div>
         
-        {formError && (
-          <div className="alert alert-danger">{formError}</div>
-        )}
-        
         <div className="form-actions">
-          <Link to="/exercise-browser" className="btn btn-secondary">
+          <button 
+            type="button" 
+            onClick={handleCancel} 
+            className="btn btn-secondary"
+            disabled={isSubmitting}
+          >
             Cancel
-          </Link>
+          </button>
           <button 
             type="submit" 
             className="btn btn-primary" 

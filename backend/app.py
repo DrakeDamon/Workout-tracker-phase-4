@@ -10,6 +10,13 @@ from dotenv import load_dotenv
 load_dotenv()
 
 app = Flask(__name__)
+
+CORS(app, 
+     resources={r"/api/*": {"origins": "http://localhost:3000"}},
+     supports_credentials=True,
+     allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
+     methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
+
 # Use environment variable for database URI (for production compatibility)
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///workout_tracker.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -17,11 +24,11 @@ app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-key-for-testing')
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=30)
 # Production-ready session settings
 app.config['SESSION_COOKIE_SAMESITE'] = 'None'  # Required for cross-origin in production
-app.config['SESSION_COOKIE_SECURE'] = True  # Requires HTTPS in production
+# In app.py - modify for development environment
+# In app.py - modify for development environment
+app.config['SESSION_COOKIE_SECURE'] = False  # Set to True only in production
 app.config['SESSION_COOKIE_HTTPONLY'] = True
-
 # Update CORS for production (will be updated with actual frontend domain in deployment)
-CORS(app, supports_credentials=True, origins=['http://localhost:3000'])
 
 db.init_app(app)
 login_manager = LoginManager()
@@ -72,9 +79,14 @@ def logout():
 
 @app.route('/api/check-auth', methods=['GET'])
 def check_auth():
-    if current_user.is_authenticated:
-        return jsonify({'authenticated': True, 'user': current_user.to_dict()}), 200
-    return jsonify({'authenticated': False}), 200
+    try:
+        if current_user.is_authenticated:
+            return jsonify({'authenticated': True, 'user': current_user.to_dict()}), 200
+        return jsonify({'authenticated': False}), 200
+    except Exception as e:
+        print(f"Error in check_auth: {str(e)}")
+        # Return a safer response
+        return jsonify({'authenticated': False, 'error': 'Server error occurred'}), 500
 
 @app.route('/api/user-data', methods=['GET'])
 @login_required

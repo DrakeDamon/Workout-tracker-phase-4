@@ -7,7 +7,7 @@ import CreateRoutine from './pages/CreateRoutine';
 import EditRoutine from './pages/EditRoutine';
 import ExerciseBrowser from './pages/ExerciseBrowser';
 import RoutineDetail from './pages/RoutineDetail';
-import CreateExercise from './pages/CreateExercise';
+import CreateExercise from './components/Exercises/CreateExercise';
 
 function App() {
   return (

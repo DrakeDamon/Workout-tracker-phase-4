@@ -27,6 +27,8 @@ const RoutineDetail = () => {
   const instanceId = useMemo(() => generateInstanceId(), []);
 
   // Redirect to login if not authenticated
+
+
   useEffect(() => {
     if (!isAuthenticated && hasFetched) {
       navigate('/login');

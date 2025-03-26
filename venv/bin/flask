@@ -1,4 +1,4 @@
-#!/Users/daviddamon/Desktop/workout-tracker/venv/bin/python3.12
+#!/Users/daviddamon/Desktop/workout-tracker/venv/bin/python
 # -*- coding: utf-8 -*-
 import re
 import sys

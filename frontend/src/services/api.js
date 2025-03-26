@@ -4,14 +4,19 @@ const API_BASE_URL = 'http://localhost:5555';
 // Helper function for fetch requests
 const fetchWithRetry = async (url, options = {}, retries = 1) => {
   try {
+    // Add logging to debug
+    console.log('Attempting fetch to:', url);
+    
     const response = await fetch(url, {
       ...options,
-      credentials: 'include',
+      credentials: 'include',  // This is important for cookies/session
       headers: {
         'Content-Type': 'application/json',
         ...options.headers,
       },
     });
+    
+    console.log('Response status:', response.status);
 
     // Check if response is not ok (status outside the range 200-299)
     if (!response.ok) {
@@ -30,6 +35,8 @@ const fetchWithRetry = async (url, options = {}, retries = 1) => {
     
     return {};
   } catch (error) {
+    console.error('Fetch error:', error);
+    
     // If we have a network error and retries left, try again after a delay
     if ((error.name === 'TypeError' || error.message === 'Failed to fetch') && retries > 0) {
       console.warn('Network error detected, retrying request...');
