@@ -97,6 +97,11 @@ class RoutineExercise(db.Model):
     notes = db.Column(db.Text)
     order = db.Column(db.Integer)
 
+    routines = db.relationship('Routine', backref='routinexercises', cascade="all, delete-orphan")
+    exercises = db.relationship('Exercise', backref='routinexercises', cascade="all, delete-orphan")
+
+    serialize_rules = ('-routines.routineexercises', '-exercises.routineexercises')
+
     def to_dict(self):
         return {
             'id': self.id,
