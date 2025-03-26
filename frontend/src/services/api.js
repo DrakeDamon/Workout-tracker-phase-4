@@ -4,23 +4,29 @@ const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5555';
 // Helper function for fetch requests
 const fetchWithErrorHandling = async (url, options = {}) => {
   try {
+    console.log('Fetching URL:', url); // Add logging
+    console.log('Fetch Options:', options); // Add logging
+
     const response = await fetch(url, {
       ...options,
+      credentials: 'include',
       headers: {
         'Content-Type': 'application/json',
         ...options.headers,
       },
     });
 
+    console.log('Response Status:', response.status); // Add logging
+
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      const error = new Error(errorData.error || `HTTP error! status: ${response.status}`);
+      const errorText = await response.text(); // Get full error response
+      console.error('Error Response:', errorText);
+      
+      const error = new Error(errorText || `HTTP error! status: ${response.status}`);
       error.status = response.status;
-      error.data = errorData;
       throw error;
     }
 
-    // For successful responses, check if there's content before parsing as JSON
     const contentType = response.headers.get('content-type');
     if (contentType && contentType.includes('application/json') && response.status !== 204) {
       return await response.json();
@@ -28,7 +34,11 @@ const fetchWithErrorHandling = async (url, options = {}) => {
     
     return {};
   } catch (error) {
-    console.error('API Error:', error);
+    console.error('Fetch Error Details:', {
+      message: error.message,
+      name: error.name,
+      stack: error.stack
+    });
     throw error;
   }
 };
@@ -119,6 +129,21 @@ const api = {
       body: JSON.stringify({ username, password }),
     });
   },
+
+// Make sure this is in your api.js
+checkSession: async () => {
+  try {
+    const response = await fetchWithErrorHandling(`${API_BASE_URL}/api/check_session`);
+    return response;
+  } catch (error) {
+    // If status is 401, just return null (not logged in)
+    if (error.status === 401) {
+      return null;
+    }
+    // For other errors, re-throw
+    throw error;
+  }
+},
 
   logout: async () => {
     return fetchWithErrorHandling(`${API_BASE_URL}/api/logout`, {

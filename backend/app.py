@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, session, jsonify
 from flask_restful import Api, Resource, reqparse
 from flask_cors import CORS
 from flask_migrate import Migrate
@@ -22,10 +22,30 @@ api = Api(app)
 
 # Configure CORS
 CORS(app, 
-     resources={r"/api/*": {"origins": Config.CORS_ORIGINS}},
-     supports_credentials=Config.CORS_SUPPORTS_CREDENTIALS,
-     allow_headers=Config.CORS_HEADERS,
-     methods=Config.CORS_METHODS)
+
+     resources={
+
+         r"/api/*": {
+
+             "origins": ["http://localhost:3000"],
+
+             "methods": ["OPTIONS", "GET", "POST", "PUT", "DELETE"],
+
+             "allow_headers": ["Content-Type", "Authorization"],
+
+             "supports_credentials": True
+
+         }
+
+     })
+
+# Ensure you handle OPTIONS explicitly
+
+@app.route('/api/login', methods=['OPTIONS'])
+
+def options_handler():
+
+    return '', 200
 
 # Error handlers
 @app.errorhandler(404)
@@ -35,6 +55,61 @@ def not_found(error):
 @app.errorhandler(400)
 def bad_request(error):
     return jsonify({"error": str(error)}), 400
+
+
+# Login Resource
+
+class LoginResource(Resource):
+
+    def post(self):
+
+        data = request.get_json()
+
+        username = data.get('username')
+
+        password = data.get('password')
+
+        # Simplified authentication using config
+
+        if (username == app.config['DEFAULT_USERNAME'] and 
+
+            password == app.config['DEFAULT_PASSWORD']):
+
+            # Set session user
+
+            session['user_id'] = 1  # Hardcoded user ID
+
+            return {'id': 1, 'username': username}, 200
+
+        
+
+        return {'error': 'Invalid credentials'}, 401
+
+# Check Session Resource
+
+class CheckSessionResource(Resource):
+
+    def get(self):
+
+        # Check if user is in session
+
+        if session.get('user_id'):
+
+            return {'id': session['user_id'], 'username': app.config['DEFAULT_USERNAME']}, 200
+
+        return {'message': '401: Not Authorized'}, 401
+
+# Logout Resource
+
+class LogoutResource(Resource):
+
+    def delete(self):
+
+        # Remove user from session
+
+        session.pop('user_id', None)
+
+        return {'message': 'Logged out successfully'}, 204
 
 # Home route
 @app.route('/')
@@ -327,6 +402,9 @@ api.add_resource(ExerciseResource, '/api/exercises/<int:exercise_id>')
 api.add_resource(RoutineExerciseResource, '/api/routines/<int:routine_id>/exercises')
 api.add_resource(RoutineExerciseDetailResource, '/api/routine-exercises/<int:routine_exercise_id>')
 api.add_resource(UserDataResource, '/api/user-data')
+api.add_resource(LoginResource, '/api/login')
+api.add_resource(CheckSessionResource, '/api/check_session')
+api.add_resource(LogoutResource, '/api/logout')
 
 # For running the app directly
 if __name__ == '__main__':
