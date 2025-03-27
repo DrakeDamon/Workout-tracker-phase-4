@@ -50,6 +50,15 @@ const api = {
     return fetchWithErrorHandling(`${API_BASE_URL}/api/user-data`);
   },
 
+  register: async (username, password) => {
+    return fetchWithErrorHandling(`${API_BASE_URL}/api/register`, {
+      method: 'POST',
+      body: JSON.stringify({ username, password }),
+    });
+  
+
+  },
+
   // Routine endpoints
   getRoutines: async () => {
     return fetchWithErrorHandling(`${API_BASE_URL}/api/routines`);

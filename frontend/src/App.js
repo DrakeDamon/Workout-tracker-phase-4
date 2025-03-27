@@ -1,7 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AppProvider, useAppContext } from './context/AppContext';
-import Register from './pages/Register';
 // Import pages
 import Dashboard from './pages/Dashboard';
 import Login from './pages/Login';
@@ -10,6 +9,7 @@ import EditRoutine from './pages/EditRoutine';
 import RoutineDetail from './pages/RoutineDetail';
 import ExerciseBrowser from './pages/ExerciseBrowser';
 import CreateExercise from './pages/CreateExercise';
+import Register from './pages/Register';
 
 // Protected Route component
 const ProtectedRoute = ({ children }) => {
@@ -21,6 +21,7 @@ const ProtectedRoute = ({ children }) => {
   
   return children;
 };
+
 
 // App Routes
 const AppRoutes = () => {
@@ -35,9 +36,7 @@ const AppRoutes = () => {
       } />
 
       <Route path="/register" element={
-        <ProtectedRoute>
           <Register />
-          </ProtectedRoute>
  
       } />
       

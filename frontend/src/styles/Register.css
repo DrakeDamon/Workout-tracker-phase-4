@@ -1,6 +1,6 @@
-/* styles/Login.css */
+/* styles/Register.css */
 
-.login-container {
+.register-container {
   display: flex;
   justify-content: center;
   align-items: center;
@@ -9,7 +9,7 @@
   padding: 1rem;
 }
 
-.login-card {
+.register-card {
   background-color: white;
   border-radius: 8px;
   box-shadow: var(--box-shadow, 0 4px 6px rgba(0, 0, 0, 0.1));
@@ -18,35 +18,25 @@
   overflow: hidden;
 }
 
-.login-header {
+.register-header {
   background-color: var(--primary-color, #4a6fff);
   color: white;
   padding: 2rem;
   text-align: center;
 }
 
-.login-header h1 {
+.register-header h1 {
   font-size: 1.8rem;
   margin-bottom: 0.5rem;
 }
 
-.login-header h2 {
+.register-header h2 {
   font-size: 1.3rem;
   font-weight: 500;
   opacity: 0.9;
 }
 
-.login-form {
-  padding: 2rem;
-}
-
-/* Update your form structure to match these styles */
-form {
-  background-color: white;
-  border-radius: 8px;
-  box-shadow: var(--box-shadow, 0 4px 6px rgba(0, 0, 0, 0.1));
-  width: 100%;
-  max-width: 400px;
+.register-form {
   padding: 2rem;
 }
 
@@ -54,25 +44,29 @@ form {
   margin-bottom: 1.5rem;
 }
 
-/* Style for Formik fields */
-form input {
+.form-group label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: var(--dark-color, #343a40);
+}
+
+.form-group input {
   width: 100%;
   padding: 0.75rem;
   font-size: 1rem;
   border: 1px solid var(--border-color, #dee2e6);
   border-radius: 4px;
   transition: border-color 0.2s;
-  margin-bottom: 1rem;
 }
 
-form input:focus {
+.form-group input:focus {
   outline: none;
   border-color: var(--primary-color, #4a6fff);
   box-shadow: 0 0 0 3px rgba(74, 111, 255, 0.1);
 }
 
-/* Style for button */
-form button {
+.register-button {
   width: 100%;
   padding: 0.75rem;
   font-size: 1rem;
@@ -83,53 +77,55 @@ form button {
   border-radius: 4px;
   cursor: pointer;
   transition: background-color 0.2s;
-  margin-top: 1rem;
 }
 
-form button:hover {
+.register-button:hover {
   background-color: var(--primary-dark, #3a56cc);
 }
 
-form button:disabled {
+.register-button:disabled {
   background-color: #a5b3ff;
   cursor: not-allowed;
 }
 
-.login-footer {
+.register-footer {
   padding: 1rem 2rem;
   text-align: center;
   border-top: 1px solid var(--border-color, #dee2e6);
-  margin-top: 1.5rem;
 }
 
-.register-link {
+.login-link {
   color: var(--primary-color, #4a6fff);
   text-decoration: none;
   font-weight: 500;
-  display: block;
-  text-align: center;
-  margin-top: 1rem;
 }
 
-.register-link:hover {
+.login-link:hover {
   text-decoration: underline;
+}
+
+.field-error {
+  color: var(--danger-color, #dc3545);
+  font-size: 0.85rem;
+  margin-top: 0.25rem;
 }
 
 .auth-error {
   background-color: #ffebee;
   color: var(--danger-color, #dc3545);
   padding: 1rem;
-  margin: 1rem 0;
+  margin: 1rem 2rem 0;
   border-radius: 4px;
   font-size: 0.9rem;
   text-align: center;
 }
 
-/* Style for form validation errors */
-.field-error {
-  color: var(--danger-color, #dc3545);
-  font-size: 0.85rem;
-  margin-top: -0.5rem;
-  margin-bottom: 1rem;
-  display: block;
+@media (max-width: 480px) {
+  .register-card {
+    max-width: 100%;
+  }
+
+  .register-form {
+    padding: 1.5rem;
+  }
 }

@@ -114,53 +114,22 @@ class LogoutResource(Resource):
         session.pop('user_id', None)
 
         return {'message': 'Logged out successfully'}, 204
-
-
-
-
+# Registration Resource
 class RegisterResource(Resource):
-
     def post(self):
-
-        """Register a new user"""
-
         data = request.get_json()
-
-        
-
         username = data.get('username')
-
         password = data.get('password')
-
         
-
         # Validate required fields
-
         if not username or not password:
-
             return {"error": "Username and password are required"}, 400
-
         
-
-        # Check if username matches the config (for simplicity)
-
-        if username == app.config['DEFAULT_USERNAME']:
-
-            return {"error": "Username already exists"}, 400
-
-        
-
-        # For this example, we'll update the config username and password
-
-        # In a real application, you would store this in a database
-
+        # Update the default username and password
         app.config['DEFAULT_USERNAME'] = username
-
         app.config['DEFAULT_PASSWORD'] = password
-
         
-
-        return {"message": "User registered successfully"}, 201
+        return {"message": "Registration successful"}, 201
 # Home route
 @app.route('/')
 def home():
