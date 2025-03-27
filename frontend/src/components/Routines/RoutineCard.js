@@ -42,9 +42,6 @@ const RoutineCard = ({ routine }) => {
         <Link to={`/routines/${routine.id}`} className="view-btn">
           View Details
         </Link>
-        <Link to={`/routines/${routine.id}/edit`} className="edit-btn">
-          Edit
-        </Link>
         <button 
           onClick={handleDelete} 
           className="delete-btn"
