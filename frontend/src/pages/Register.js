@@ -8,15 +8,20 @@ const Navbar = () => {
   const navigate = useNavigate();
   
   const handleLogout = async () => {
-    await logout();
-    navigate('/login');
+    try {
+      await logout();
+      navigate('/login');
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
   };
   
   return (
     <nav className="navbar">
       <div className="navbar-brand">
         <Link to="/">Workout Tracker</Link>
-      </div>     
+      </div>
+      
       {isLoggedIn ? (
         <div className="navbar-menu">
           <Link to="/" className="navbar-item">Dashboard</Link>
@@ -37,4 +42,5 @@ const Navbar = () => {
     </nav>
   );
 };
+
 export default Navbar;

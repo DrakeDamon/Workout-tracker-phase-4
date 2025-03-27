@@ -1,7 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AppProvider, useAppContext } from './context/AppContext';
-
+import Register from './pages/Register';
 // Import pages
 import Dashboard from './pages/Dashboard';
 import Login from './pages/Login';
@@ -32,6 +32,13 @@ const AppRoutes = () => {
         <ProtectedRoute>
           <Dashboard />
         </ProtectedRoute>
+      } />
+
+      <Route path="/register" element={
+        <ProtectedRoute>
+          <Register />
+          </ProtectedRoute>
+ 
       } />
       
       <Route path="/routines/create" element={

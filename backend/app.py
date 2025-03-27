@@ -28,11 +28,8 @@ CORS(app,
          r"/api/*": {
 
              "origins": ["http://localhost:3000"],
-
              "methods": ["OPTIONS", "GET", "POST", "PUT", "DELETE"],
-
              "allow_headers": ["Content-Type", "Authorization"],
-
              "supports_credentials": True
 
          }
@@ -55,6 +52,13 @@ def not_found(error):
 @app.errorhandler(400)
 def bad_request(error):
     return jsonify({"error": str(error)}), 400
+
+@app.route('/api/register', methods=['OPTIONS'])
+
+def register_options_handler():
+
+    return '', 200
+
 
 
 # Login Resource
@@ -111,6 +115,52 @@ class LogoutResource(Resource):
 
         return {'message': 'Logged out successfully'}, 204
 
+
+
+
+class RegisterResource(Resource):
+
+    def post(self):
+
+        """Register a new user"""
+
+        data = request.get_json()
+
+        
+
+        username = data.get('username')
+
+        password = data.get('password')
+
+        
+
+        # Validate required fields
+
+        if not username or not password:
+
+            return {"error": "Username and password are required"}, 400
+
+        
+
+        # Check if username matches the config (for simplicity)
+
+        if username == app.config['DEFAULT_USERNAME']:
+
+            return {"error": "Username already exists"}, 400
+
+        
+
+        # For this example, we'll update the config username and password
+
+        # In a real application, you would store this in a database
+
+        app.config['DEFAULT_USERNAME'] = username
+
+        app.config['DEFAULT_PASSWORD'] = password
+
+        
+
+        return {"message": "User registered successfully"}, 201
 # Home route
 @app.route('/')
 def home():
@@ -405,7 +455,7 @@ api.add_resource(UserDataResource, '/api/user-data')
 api.add_resource(LoginResource, '/api/login')
 api.add_resource(CheckSessionResource, '/api/check_session')
 api.add_resource(LogoutResource, '/api/logout')
-
+api.add_resource(RegisterResource, '/api/register')
 # For running the app directly
 if __name__ == '__main__':
     app.run(debug=True, port=5555)
