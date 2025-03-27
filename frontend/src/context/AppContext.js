@@ -15,9 +15,6 @@ function useAppContext() {
 
 // Create the provider component
 function AppProvider({ children }) {
-  // User state
-  const [user, setUser] = useState(null);
-  
   // Data states
   const [routines, setRoutines] = useState([]);
   const [exercises, setExercises] = useState([]);
@@ -30,47 +27,19 @@ function AppProvider({ children }) {
     userData: false,
     routine: false,
     form: false,
-    auth: false,
-    deletion: null,  // Will store ID of item being deleted
-    update: null     // Will store ID of item being updated
+    deletion: null,
+    update: null
   });
   
   // Error states
   const [errors, setErrors] = useState({
     userData: null,
     routine: null,
-    form: null,
-    auth: null
+    form: null
   });
-
-  // Check session on initial load
-  useEffect(() => {
-    checkSession();
-  }, []);
-
-  // Check if user is already logged in
-  const checkSession = async () => {
-    setIsLoading(prev => ({ ...prev, auth: true }));
-    try {
-      const userData = await api.checkSession();
-      setUser(userData);
-      
-      // If authenticated, fetch user data
-      if (userData) {
-        await fetchUserData();
-      }
-    } catch (err) {
-      console.error('Session check error:', err);
-      setUser(null);
-    } finally {
-      setIsLoading(prev => ({ ...prev, auth: false }));
-    }
-  };
 
   // Fetch all user data at once
   const fetchUserData = useCallback(async () => {
-    if (!user) return;
-    
     setIsLoading(prev => ({ ...prev, userData: true }));
     try {
       const response = await api.getUserData();
@@ -88,52 +57,12 @@ function AppProvider({ children }) {
     } finally {
       setIsLoading(prev => ({ ...prev, userData: false }));
     }
-  }, [user]);
+  }, []);
 
-  // Login function
-  const login = async (username, password) => {
-    setIsLoading(prev => ({ ...prev, auth: true }));
-    setErrors(prev => ({ ...prev, auth: null }));
-    
-    try {
-      const userData = await api.login(username, password);
-      setUser(userData);
-      
-      // Fetch user data after successful login
-      await fetchUserData();
-      
-      return true;
-    } catch (err) {
-      console.error('Login error:', err);
-      setErrors(prev => ({ ...prev, auth: 'Invalid credentials' }));
-      return false;
-    } finally {
-      setIsLoading(prev => ({ ...prev, auth: false }));
-    }
-  };
-  
-  // Logout function
-  const logout = async () => {
-    setIsLoading(prev => ({ ...prev, auth: true }));
-    try {
-      await api.logout();
-      
-      // Clear all user-related data
-      setUser(null);
-      setRoutines([]);
-      setExercises([]);
-      setMuscleGroups([]);
-      setEquipment([]);
-      setCurrentRoutine(null);
-      
-      return true;
-    } catch (err) {
-      console.error('Logout error:', err);
-      return false;
-    } finally {
-      setIsLoading(prev => ({ ...prev, auth: false }));
-    }
-  };
+  // Fetch data on initial load
+  useEffect(() => {
+    fetchUserData();
+  }, [fetchUserData]);
 
   // Routine CRUD operations
   const getRoutineById = (routineId) => {
@@ -399,10 +328,6 @@ function AppProvider({ children }) {
 
   // Build the context value object
   const contextValue = {
-    // Authentication state
-    user,
-    isLoggedIn: !!user,
-    
     // Application data state
     routines,
     exercises,
@@ -413,11 +338,6 @@ function AppProvider({ children }) {
     // Loading and error states
     isLoading,
     errors,
-    
-    // Auth functions
-    login,
-    logout,
-    checkSession,
     
     // Data loading function
     fetchUserData,

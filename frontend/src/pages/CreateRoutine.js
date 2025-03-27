@@ -1,88 +1,150 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Formik, Form, Field, ErrorMessage, FieldArray } from 'formik';
-import * as Yup from 'yup';
 import { useAppContext } from '../context/AppContext';
 import Navbar from '../components/Layout/Navbar';
-import '../styles/RoutineForm.css';
+import '../styles/ExerciseBrowser.css';
 
-// Validation schema
-const RoutineSchema = Yup.object().shape({
-  name: Yup.string()
-    .required('Routine name is required')
-    .min(3, 'Name must be at least 3 characters')
-    .max(100, 'Name must be less than 100 characters'),
-  day_of_week: Yup.string(),
-  description: Yup.string().max(500, 'Description must be less than 500 characters'),
-  exercises: Yup.array().of(
-    Yup.object().shape({
-      exercise_id: Yup.number().required('Exercise is required'),
-      sets: Yup.number()
-        .min(1, 'Sets must be at least 1')
-        .required('Sets are required'),
-      reps: Yup.number()
-        .min(1, 'Reps must be at least 1')
-        .required('Reps are required'),
-      weight: Yup.number()
-        .nullable()
-        .min(0, 'Weight cannot be negative'),
-      notes: Yup.string()
-    })
-  )
-});
-
-const daysOfWeek = [
-  'Monday', 'Tuesday', 'Wednesday', 'Thursday', 
-  'Friday', 'Saturday', 'Sunday'
-];
-
-const CreateRoutine = () => {
+const ExerciseBrowser = () => {
+  const { exercises, muscleGroups, equipment, isLoading, createExercise } = useAppContext();
   const navigate = useNavigate();
-  const { 
-    createRoutine, 
-    addExerciseToRoutine, 
-    exercises, 
-    isLoading,
-    errors
-  } = useAppContext();
   
-  const handleSubmit = async (values, { setSubmitting }) => {
+  // Filter state
+  const [searchTerm, setSearchTerm] = useState('');
+  const [muscleGroupFilter, setMuscleGroupFilter] = useState('');
+  const [equipmentFilter, setEquipmentFilter] = useState('');
+  
+  // Form state
+  const [formData, setFormData] = useState({
+    name: '',
+    description: '',
+    muscle_group: '',
+    equipment: ''
+  });
+  const [formErrors, setFormErrors] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Filtered exercises
+  const [filteredExercises, setFilteredExercises] = useState([]);
+  
+  // Effect to filter exercises when filters or exercises change
+  useEffect(() => {
+    if (!exercises) return;
+    
+    let result = [...exercises];
+    
+    // Apply search filter
+    if (searchTerm) {
+      result = result.filter(exercise => 
+        exercise.name.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+    
+    // Apply muscle group filter
+    if (muscleGroupFilter) {
+      result = result.filter(exercise => 
+        exercise.muscle_group === muscleGroupFilter
+      );
+    }
+    
+    // Apply equipment filter
+    if (equipmentFilter) {
+      result = result.filter(exercise => 
+        exercise.equipment === equipmentFilter
+      );
+    }
+    
+    setFilteredExercises(result);
+  }, [exercises, searchTerm, muscleGroupFilter, equipmentFilter]);
+  
+  // Reset all filters
+  const resetFilters = () => {
+    setSearchTerm('');
+    setMuscleGroupFilter('');
+    setEquipmentFilter('');
+  };
+  
+  // Handle form input changes
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData({
+      ...formData,
+      [name]: value
+    });
+  };
+  
+  // Validate form
+  const validateForm = () => {
+    const errors = {};
+    
+    if (!formData.name.trim()) {
+      errors.name = 'Exercise name is required';
+    } else if (formData.name.length > 100) {
+      errors.name = 'Name must be less than 100 characters';
+    }
+    
+    if (formData.description && formData.description.length > 500) {
+      errors.description = 'Description must be less than 500 characters';
+    }
+    
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+  
+  // Handle form submission
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!validateForm()) {
+      return;
+    }
+    
+    setIsSubmitting(true);
+    
     try {
-      // Step 1: Create the routine
-      const routineData = {
-        name: values.name,
-        day_of_week: values.day_of_week,
-        description: values.description
-      };
+      // This is the key function that posts the data to the backend
+      const newExercise = await createExercise(formData);
       
-      const newRoutine = await createRoutine(routineData);
-      
-      if (!newRoutine) {
-        throw new Error('Failed to create routine');
-      }
-      
-      // Step 2: Add exercises to the routine (if any)
-      if (values.exercises && values.exercises.length > 0) {
-        for (const exercise of values.exercises) {
-          const exerciseData = {
-            exercise_id: parseInt(exercise.exercise_id, 10),
-            sets: parseInt(exercise.sets, 10),
-            reps: parseInt(exercise.reps, 10),
-            weight: exercise.weight ? parseFloat(exercise.weight) : null,
-            notes: exercise.notes || null
-          };
-          
-          await addExerciseToRoutine(newRoutine.id, exerciseData);
+      if (newExercise) {
+        console.log('New exercise created:', newExercise);
+        
+        // Reset form data
+        setFormData({
+          name: '',
+          description: '',
+          muscle_group: '',
+          equipment: ''
+        });
+        
+        // Add the new exercise to the filtered list if it matches current filters
+        let shouldAddToFiltered = true;
+        
+        if (muscleGroupFilter && newExercise.muscle_group !== muscleGroupFilter) {
+          shouldAddToFiltered = false;
         }
+        
+        if (equipmentFilter && newExercise.equipment !== equipmentFilter) {
+          shouldAddToFiltered = false;
+        }
+        
+        if (searchTerm && !newExercise.name.toLowerCase().includes(searchTerm.toLowerCase())) {
+          shouldAddToFiltered = false;
+        }
+        
+        // Only update local state if the new exercise matches current filters
+        if (shouldAddToFiltered) {
+          setFilteredExercises(prev => [...prev, newExercise]);
+        }
+        
+        // Success message
+        alert('Exercise created successfully!');
       }
-      
-      // Step 3: Navigate to the new routine
-      navigate('/');
-    } catch (err) {
-      console.error('Form submission error:', err);
-      // Errors will be handled by the context and shown in the UI
+    } catch (error) {
+      console.error('Error creating exercise:', error);
+      setFormErrors({
+        form: 'Failed to create exercise. Please try again.'
+      });
     } finally {
-      setSubmitting(false);
+      setIsSubmitting(false);
     }
   };
   
@@ -90,210 +152,184 @@ const CreateRoutine = () => {
     <div className="app-container">
       <Navbar />
       
-      <div className="routine-form-container">
-        <h1>Create New Workout Routine</h1>
+      <div className="exercise-browser-container">
+        <div className="exercise-browser-header">
+          <h1>Exercise Library</h1>
+          <p>Browse our collection of exercises or add your own</p>
+        </div>
         
-        <Formik
-          initialValues={{
-            name: '',
-            day_of_week: '',
-            description: '',
-            exercises: []
-          }}
-          validationSchema={RoutineSchema}
-          onSubmit={handleSubmit}
-        >
-          {({ values, isSubmitting }) => (
-            <Form className="routine-form">
-              <div className="form-group">
-                <label htmlFor="name">Routine Name*</label>
-                <Field 
-                  type="text" 
-                  name="name" 
-                  id="name" 
-                  className="form-control"
-                  disabled={isSubmitting || isLoading.form}
-                />
-                <ErrorMessage name="name" component="div" className="field-error" />
-              </div>
-              
-              <div className="form-group">
-                <label htmlFor="day_of_week">Day of Week</label>
-                <Field 
-                  as="select" 
-                  name="day_of_week" 
-                  id="day_of_week" 
-                  className="form-control"
-                  disabled={isSubmitting || isLoading.form}
-                >
-                  <option value="">Select a day (optional)</option>
-                  {daysOfWeek.map(day => (
-                    <option key={day} value={day}>{day}</option>
-                  ))}
-                </Field>
-                <ErrorMessage name="day_of_week" component="div" className="field-error" />
-              </div>
-              
-              <div className="form-group">
-                <label htmlFor="description">Description</label>
-                <Field 
-                  as="textarea" 
-                  name="description" 
-                  id="description" 
-                  className="form-control"
-                  rows="4"
-                  disabled={isSubmitting || isLoading.form}
-                />
-                <ErrorMessage name="description" component="div" className="field-error" />
-              </div>
-              
-              <div className="exercises-section">
-                <h2>Exercises</h2>
-                <FieldArray name="exercises">
-                  {({ push, remove }) => (
-                    <div>
-                      {values.exercises.map((_, index) => (
-                        <div key={index} className="exercise-entry">
-                          <h3>Exercise #{index + 1}</h3>
-                          
-                          <div className="form-group">
-                            <label htmlFor={`exercises[${index}].exercise_id`}>Exercise*</label>
-                            <Field 
-                              as="select" 
-                              name={`exercises[${index}].exercise_id`} 
-                              className="form-control"
-                              disabled={isSubmitting || isLoading.form}
-                            >
-                              <option value="">Select an exercise</option>
-                              {exercises.map(exercise => (
-                                <option key={exercise.id} value={exercise.id}>
-                                  {exercise.name} ({exercise.muscle_group})
-                                </option>
-                              ))}
-                            </Field>
-                            <ErrorMessage 
-                              name={`exercises[${index}].exercise_id`} 
-                              component="div" 
-                              className="field-error" 
-                            />
-                          </div>
-                          
-                          <div className="form-row">
-                            <div className="form-group half">
-                              <label htmlFor={`exercises[${index}].sets`}>Sets*</label>
-                              <Field 
-                                type="number" 
-                                name={`exercises[${index}].sets`} 
-                                className="form-control"
-                                disabled={isSubmitting || isLoading.form}
-                              />
-                              <ErrorMessage 
-                                name={`exercises[${index}].sets`} 
-                                component="div" 
-                                className="field-error" 
-                              />
-                            </div>
-                            
-                            <div className="form-group half">
-                              <label htmlFor={`exercises[${index}].reps`}>Reps*</label>
-                              <Field 
-                                type="number" 
-                                name={`exercises[${index}].reps`} 
-                                className="form-control"
-                                disabled={isSubmitting || isLoading.form}
-                              />
-                              <ErrorMessage 
-                                name={`exercises[${index}].reps`} 
-                                component="div" 
-                                className="field-error" 
-                              />
-                            </div>
-                          </div>
-                          
-                          <div className="form-group">
-                            <label htmlFor={`exercises[${index}].weight`}>Weight (optional)</label>
-                            <Field 
-                              type="number" 
-                              name={`exercises[${index}].weight`} 
-                              className="form-control"
-                              disabled={isSubmitting || isLoading.form}
-                              step="0.5"
-                            />
-                            <ErrorMessage 
-                              name={`exercises[${index}].weight`} 
-                              component="div" 
-                              className="field-error" 
-                            />
-                          </div>
-                          
-                          <div className="form-group">
-                            <label htmlFor={`exercises[${index}].notes`}>Notes (optional)</label>
-                            <Field 
-                              as="textarea"
-                              name={`exercises[${index}].notes`} 
-                              className="form-control"
-                              rows="2"
-                              disabled={isSubmitting || isLoading.form}
-                            />
-                          </div>
-                          
-                          <button 
-                            type="button" 
-                            onClick={() => remove(index)} 
-                            className="btn btn-danger"
-                            disabled={isSubmitting || isLoading.form}
-                          >
-                            Remove Exercise
-                          </button>
-                        </div>
-                      ))}
-                      
-                      <button 
-                        type="button" 
-                        onClick={() => push({ 
-                          exercise_id: '', 
-                          sets: 3, 
-                          reps: 10, 
-                          weight: '', 
-                          notes: '' 
-                        })} 
-                        className="btn btn-secondary"
-                        disabled={isSubmitting || isLoading.form}
-                      >
-                        Add Exercise
-                      </button>
+        <div className="filter-controls">
+          <div className="search-box">
+            <input
+              type="text"
+              className="search-input"
+              placeholder="Search exercises..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          
+          <select 
+            className="filter-select"
+            value={muscleGroupFilter}
+            onChange={(e) => setMuscleGroupFilter(e.target.value)}
+          >
+            <option value="">All Muscle Groups</option>
+            {muscleGroups && muscleGroups.map(group => (
+              <option key={group} value={group}>{group}</option>
+            ))}
+          </select>
+          
+          <select 
+            className="filter-select"
+            value={equipmentFilter}
+            onChange={(e) => setEquipmentFilter(e.target.value)}
+          >
+            <option value="">All Equipment</option>
+            {equipment && equipment.map(item => (
+              <option key={item} value={item}>{item}</option>
+            ))}
+          </select>
+          
+          <button 
+            className="btn btn-secondary"
+            onClick={resetFilters}
+          >
+            Reset Filters
+          </button>
+        </div>
+        
+        {/* Create Exercise Form */}
+        <div className="exercise-form-container">
+          <h2>Create New Exercise</h2>
+          
+          {formErrors.form && (
+            <div className="alert alert-danger">{formErrors.form}</div>
+          )}
+          
+          <form className="exercise-form" onSubmit={handleSubmit}>
+            <div className="form-group">
+              <label htmlFor="name">Exercise Name*</label>
+              <input
+                type="text"
+                id="name"
+                name="name"
+                className="form-control"
+                value={formData.name}
+                onChange={handleChange}
+                disabled={isSubmitting}
+              />
+              {formErrors.name && <div className="error-message">{formErrors.name}</div>}
+            </div>
+            
+            <div className="form-group">
+              <label htmlFor="muscle_group">Muscle Group</label>
+              <select
+                id="muscle_group"
+                name="muscle_group"
+                className="form-control"
+                value={formData.muscle_group}
+                onChange={handleChange}
+                disabled={isSubmitting}
+              >
+                <option value="">Select Muscle Group</option>
+                {muscleGroups && muscleGroups.map(group => (
+                  <option key={group} value={group}>{group}</option>
+                ))}
+              </select>
+            </div>
+            
+            <div className="form-group">
+              <label htmlFor="equipment">Equipment</label>
+              <select
+                id="equipment"
+                name="equipment"
+                className="form-control"
+                value={formData.equipment}
+                onChange={handleChange}
+                disabled={isSubmitting}
+              >
+                <option value="">Select Equipment</option>
+                {equipment && equipment.map(item => (
+                  <option key={item} value={item}>{item}</option>
+                ))}
+              </select>
+            </div>
+            
+            <div className="form-group">
+              <label htmlFor="description">Description</label>
+              <textarea
+                id="description"
+                name="description"
+                className="form-control"
+                rows="4"
+                value={formData.description}
+                onChange={handleChange}
+                disabled={isSubmitting}
+              />
+              {formErrors.description && <div className="error-message">{formErrors.description}</div>}
+            </div>
+            
+            <div className="form-actions">
+              <button
+                type="submit"
+                className="btn btn-primary"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? 'Creating...' : 'Create Exercise'}
+              </button>
+            </div>
+          </form>
+        </div>
+        
+        <div className="exercise-results">
+          {isLoading.userData ? (
+            <div className="loading">Loading exercises...</div>
+          ) : filteredExercises.length === 0 ? (
+            <div className="no-exercises">
+              <p>No exercises found matching your filters.</p>
+              <button 
+                className="btn btn-link"
+                onClick={resetFilters}
+              >
+                Clear filters
+              </button>
+            </div>
+          ) : (
+            <div className="exercise-grid">
+              {filteredExercises.map(exercise => (
+                <div key={exercise.id} className="exercise-card">
+                  <h3>{exercise.name}</h3>
+                  
+                  {exercise.muscle_group && (
+                    <div className="exercise-muscle">{exercise.muscle_group}</div>
+                  )}
+                  
+                  {exercise.equipment && (
+                    <div className="exercise-equipment">
+                      <span>Equipment:</span> {exercise.equipment}
                     </div>
                   )}
-                </FieldArray>
-              </div>
-              
-              {errors.form && (
-                <div className="form-error">{errors.form}</div>
-              )}
-              
-              <div className="form-actions">
-                <button 
-                  type="button" 
-                  onClick={() => navigate('/')} 
-                  className="btn btn-secondary"
-                  disabled={isSubmitting || isLoading.form}
-                >
-                  Cancel
-                </button>
-                <button 
-                  type="submit" 
-                  className="btn btn-primary"
-                  disabled={isSubmitting || isLoading.form}
-                >
-                  {isSubmitting || isLoading.form ? 'Creating...' : 'Create Routine'}
-                </button>
-              </div>
-            </Form>
+                  
+                  {exercise.description && (
+                    <div className="exercise-description">
+                      <p>{exercise.description.substring(0, 100)}
+                        {exercise.description.length > 100 ? '...' : ''}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
           )}
-        </Formik>
+        </div>
+        
+        <div className="exercise-browser-footer">
+          <p>Found {filteredExercises.length} exercises</p>
+        </div>
       </div>
     </div>
   );
 };
 
-export default CreateRoutine;
+export default ExerciseBrowser;

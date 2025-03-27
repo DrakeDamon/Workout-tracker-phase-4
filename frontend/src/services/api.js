@@ -4,22 +4,21 @@ const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5555';
 // Helper function for fetch requests
 const fetchWithErrorHandling = async (url, options = {}) => {
   try {
-    console.log('Fetching URL:', url); // Add logging
-    console.log('Fetch Options:', options); // Add logging
+    console.log('Fetching URL:', url);
+    console.log('Fetch Options:', options);
 
     const response = await fetch(url, {
       ...options,
-      credentials: 'include',
       headers: {
         'Content-Type': 'application/json',
         ...options.headers,
       },
     });
 
-    console.log('Response Status:', response.status); // Add logging
+    console.log('Response Status:', response.status);
 
     if (!response.ok) {
-      const errorText = await response.text(); // Get full error response
+      const errorText = await response.text();
       console.error('Error Response:', errorText);
       
       const error = new Error(errorText || `HTTP error! status: ${response.status}`);
@@ -48,15 +47,6 @@ const api = {
   // GET all data at once (user data, routines, exercises, etc.)
   getUserData: async () => {
     return fetchWithErrorHandling(`${API_BASE_URL}/api/user-data`);
-  },
-
-  register: async (username, password) => {
-    return fetchWithErrorHandling(`${API_BASE_URL}/api/register`, {
-      method: 'POST',
-      body: JSON.stringify({ username, password }),
-    });
-  
-
   },
 
   // Routine endpoints
@@ -129,39 +119,6 @@ const api = {
     return fetchWithErrorHandling(`${API_BASE_URL}/api/routine-exercises/${routineExerciseId}`, {
       method: 'DELETE',
     });
-  },
-
-  // Authentication
-  login: async (username, password) => {
-    return fetchWithErrorHandling(`${API_BASE_URL}/api/login`, {
-      method: 'POST',
-      body: JSON.stringify({ username, password }),
-    });
-  },
-
-// Make sure this is in your api.js
-checkSession: async () => {
-  try {
-    const response = await fetchWithErrorHandling(`${API_BASE_URL}/api/check_session`);
-    return response;
-  } catch (error) {
-    // If status is 401, just return null (not logged in)
-    if (error.status === 401) {
-      return null;
-    }
-    // For other errors, re-throw
-    throw error;
-  }
-},
-
-  logout: async () => {
-    return fetchWithErrorHandling(`${API_BASE_URL}/api/logout`, {
-      method: 'POST',
-    });
-  },
-
-  checkAuth: async () => {
-    return fetchWithErrorHandling(`${API_BASE_URL}/api/check-auth`);
   }
 };
 

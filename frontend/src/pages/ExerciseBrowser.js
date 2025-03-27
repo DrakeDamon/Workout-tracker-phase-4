@@ -1,16 +1,26 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
 import Navbar from '../components/Layout/Navbar';
 import '../styles/ExerciseBrowser.css';
 
 const ExerciseBrowser = () => {
-  const { exercises, muscleGroups, equipment, isLoading } = useAppContext();
+  const { exercises, muscleGroups, equipment, isLoading, createExercise, errors } = useAppContext();
+  const navigate = useNavigate();
   
   // Filter state
   const [searchTerm, setSearchTerm] = useState('');
   const [muscleGroupFilter, setMuscleGroupFilter] = useState('');
   const [equipmentFilter, setEquipmentFilter] = useState('');
+  
+  // Form state
+  const [formData, setFormData] = useState({
+    name: '',
+    description: '',
+    muscle_group: '',
+    equipment: ''
+  });
+  const [validationErrors, setValidationErrors] = useState({});
   
   // Filtered exercises
   const [filteredExercises, setFilteredExercises] = useState([]);
@@ -50,6 +60,64 @@ const ExerciseBrowser = () => {
     setSearchTerm('');
     setMuscleGroupFilter('');
     setEquipmentFilter('');
+  };
+  
+  // Handle form input changes
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData({
+      ...formData,
+      [name]: value
+    });
+  };
+  
+  // Validate form
+  const validateForm = () => {
+    const errors = {};
+    
+    if (!formData.name.trim()) {
+      errors.name = 'Exercise name is required';
+    } else if (formData.name.length > 100) {
+      errors.name = 'Name must be less than 100 characters';
+    }
+    
+    if (formData.description && formData.description.length > 500) {
+      errors.description = 'Description must be less than 500 characters';
+    }
+    
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+  
+  // Handle form submission
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!validateForm()) {
+      return;
+    }
+    
+    try {
+      // Use the createExercise function from AppContext
+      const newExercise = await createExercise(formData);
+      
+      if (newExercise) {
+        console.log('New exercise created:', newExercise);
+        
+        // Reset form data
+        setFormData({
+          name: '',
+          description: '',
+          muscle_group: '',
+          equipment: ''
+        });
+        
+        // Success message
+        alert('Exercise created successfully!');
+      }
+    } catch (error) {
+      console.error('Error creating exercise:', error);
+    }
   };
   
   return (
@@ -103,10 +171,87 @@ const ExerciseBrowser = () => {
           </button>
         </div>
         
-        <div className="add-options">
-          <Link to="/exercises/create" className="btn btn-primary">
-            Create New Exercise
-          </Link>
+        {/* Create Exercise Form */}
+        <div className="exercise-form-container">
+          <h2>Create New Exercise</h2>
+          
+          {errors.form && (
+            <div className="alert alert-danger">{errors.form}</div>
+          )}
+          
+          <form className="exercise-form" onSubmit={handleSubmit}>
+            <div className="form-group">
+              <label htmlFor="name">Exercise Name*</label>
+              <input
+                type="text"
+                id="name"
+                name="name"
+                className="form-control"
+                value={formData.name}
+                onChange={handleChange}
+                disabled={isLoading.form}
+              />
+              {validationErrors.name && <div className="error-message">{validationErrors.name}</div>}
+            </div>
+            
+            <div className="form-group">
+              <label htmlFor="muscle_group">Muscle Group</label>
+              <select
+                id="muscle_group"
+                name="muscle_group"
+                className="form-control"
+                value={formData.muscle_group}
+                onChange={handleChange}
+                disabled={isLoading.form}
+              >
+                <option value="">Select Muscle Group</option>
+                {muscleGroups && muscleGroups.map(group => (
+                  <option key={group} value={group}>{group}</option>
+                ))}
+              </select>
+            </div>
+            
+            <div className="form-group">
+              <label htmlFor="equipment">Equipment</label>
+              <select
+                id="equipment"
+                name="equipment"
+                className="form-control"
+                value={formData.equipment}
+                onChange={handleChange}
+                disabled={isLoading.form}
+              >
+                <option value="">Select Equipment</option>
+                {equipment && equipment.map(item => (
+                  <option key={item} value={item}>{item}</option>
+                ))}
+              </select>
+            </div>
+            
+            <div className="form-group">
+              <label htmlFor="description">Description</label>
+              <textarea
+                id="description"
+                name="description"
+                className="form-control"
+                rows="4"
+                value={formData.description}
+                onChange={handleChange}
+                disabled={isLoading.form}
+              />
+              {validationErrors.description && <div className="error-message">{validationErrors.description}</div>}
+            </div>
+            
+            <div className="form-actions">
+              <button
+                type="submit"
+                className="btn btn-primary"
+                disabled={isLoading.form}
+              >
+                {isLoading.form ? 'Creating...' : 'Create Exercise'}
+              </button>
+            </div>
+          </form>
         </div>
         
         <div className="exercise-results">
