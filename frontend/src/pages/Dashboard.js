@@ -12,11 +12,13 @@ const Dashboard = () => {
     errors,
     fetchUserData
   } = useAppContext();
-  
+ 
+// reload when back to dashboard only because state context would be reset
   useEffect(() => {
-    // Refresh user data including routines
-    fetchUserData();
-  }, [fetchUserData]);
+    if (routines.length === 0 && !isLoading.userData) {
+      fetchUserData();
+    }
+  }, [routines.length, isLoading.userData, fetchUserData]);
   
   useEffect(() => {
     // Check if we need to refresh data
