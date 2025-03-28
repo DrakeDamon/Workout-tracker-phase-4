@@ -5,7 +5,6 @@ import { AppProvider } from './context/AppContext';
 // Import pages
 import Dashboard from './pages/Dashboard';
 import CreateRoutine from './pages/CreateRoutine';
-import EditRoutine from './pages/EditRoutine';
 import RoutineDetail from './pages/RoutineDetail';
 import ExerciseBrowser from './pages/ExerciseBrowser';
 
@@ -16,7 +15,6 @@ const AppRoutes = () => {
       <Route path="/" element={<Dashboard />} />
       <Route path="/routines/create" element={<CreateRoutine />} />
       <Route path="/routines/:routineId" element={<RoutineDetail />} />
-      <Route path="/routines/:routineId/edit" element={<EditRoutine />} />
       <Route path="/exercises" element={<ExerciseBrowser />} />
       
       {/* Catch all route - redirect to dashboard */}

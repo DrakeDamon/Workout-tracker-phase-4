@@ -139,36 +139,10 @@ const ExerciseBrowser = () => {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
-          </div>
+          </div>         
           
-          <select 
-            className="filter-select"
-            value={muscleGroupFilter}
-            onChange={(e) => setMuscleGroupFilter(e.target.value)}
-          >
-            <option value="">All Muscle Groups</option>
-            {muscleGroups && muscleGroups.map(group => (
-              <option key={group} value={group}>{group}</option>
-            ))}
-          </select>
           
-          <select 
-            className="filter-select"
-            value={equipmentFilter}
-            onChange={(e) => setEquipmentFilter(e.target.value)}
-          >
-            <option value="">All Equipment</option>
-            {equipment && equipment.map(item => (
-              <option key={item} value={item}>{item}</option>
-            ))}
-          </select>
-          
-          <button 
-            className="btn btn-secondary"
-            onClick={resetFilters}
-          >
-            Reset Filters
-          </button>
+     
         </div>
         
         {/* Create Exercise Form */}

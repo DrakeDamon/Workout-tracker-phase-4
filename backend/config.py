@@ -12,15 +12,7 @@ class Config:
     # Security configuration
     SECRET_KEY = os.environ.get('SECRET_KEY', 'your_very_secret_key_here')
     
-    # Default User Credentials
-    DEFAULT_USERNAME = os.environ.get('DEFAULT_USERNAME', 'testuser')
-    DEFAULT_PASSWORD = os.environ.get('DEFAULT_PASSWORD', 'testpassword')
-    
-    # Session configuration
-    PERMANENT_SESSION_LIFETIME = timedelta(days=1)
-    SESSION_COOKIE_SAMESITE = 'Lax'
-    SESSION_COOKIE_SECURE = False
-    SESSION_COOKIE_HTTPONLY = True
+
     
     # CORS configuration
     CORS_ORIGINS = [
