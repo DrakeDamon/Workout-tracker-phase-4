@@ -3,7 +3,7 @@ from flask_restful import Api, Resource, reqparse
 from flask_cors import CORS
 from flask_migrate import Migrate
 from config import Config
-from models import db, Exercise, Routine, ExerciseVariation
+from models import db, Exercise, Routine, ExerciseVariation, VariationType
 
 # Create Flask app
 app = Flask(__name__)
@@ -56,7 +56,10 @@ def home():
             "POST /api/routines/:routine_id/exercises": "Add an exercise to a routine",
             "GET /api/routines/:routine_id/exercises/:exercise_id": "Get a specific exercise in a routine",
             "PUT /api/routines/:routine_id/exercises/:exercise_id": "Update an exercise in a routine",
-            "DELETE /api/routines/:routine_id/exercises/:exercise_id": "Remove an exercise from a routine"
+            "DELETE /api/routines/:routine_id/exercises/:exercise_id": "Remove an exercise from a routine",
+            "GET /api/variations": "Get all variation types",
+            "POST /api/variations": "Create a new variation type",
+            "DELETE /api/variations/:id": "Delete a variation type",
         }
     })
 
@@ -373,6 +376,70 @@ class RoutineExerciseResource(Resource):
             db.session.rollback()
             return {"error": "An error occurred while removing the exercise from the routine"}, 500
 
+# Variation Type Resources
+class VariationTypeListResource(Resource):
+    def get(self):
+        """Get all variation types"""
+        variation_types = VariationType.query.all()
+        return [vt.to_dict() for vt in variation_types], 200
+
+    def post(self):
+        """Create a new variation type"""
+        data = request.get_json()
+        
+        # Validate required fields
+        if not data.get('name'):
+            return {"error": "Variation type name is required"}, 400
+        
+        # Check if a variation type with this name already exists
+        existing = VariationType.query.filter(VariationType.name.ilike(data['name'])).first()
+        if existing:
+            return {"error": "A variation type with this name already exists"}, 400
+        
+        try:
+            variation_type = VariationType(
+                name=data['name'],
+                description=data.get('description'),
+                is_default=data.get('is_default', False)
+            )
+            
+            db.session.add(variation_type)
+            db.session.commit()
+            
+            return variation_type.to_dict(), 201
+        except ValueError as e:
+            return {"error": str(e)}, 400
+        except Exception as e:
+            db.session.rollback()
+            return {"error": "An error occurred while creating the variation type"}, 500
+
+class VariationTypeResource(Resource):
+    def get(self, variation_type_id):
+        """Get a specific variation type"""
+        variation_type = VariationType.query.get(variation_type_id)
+        if not variation_type:
+            return {"error": "Variation type not found"}, 404
+        
+        return variation_type.to_dict(), 200
+        
+    def delete(self, variation_type_id):
+        """Delete a variation type"""
+        variation_type = VariationType.query.get(variation_type_id)
+        if not variation_type:
+            return {"error": "Variation type not found"}, 404
+        
+        # Don't allow deletion of default variation types
+        if variation_type.is_default:
+            return {"error": "Cannot delete a default variation type"}, 400
+        
+        try:
+            db.session.delete(variation_type)
+            db.session.commit()
+            return {"message": "Variation type deleted successfully"}, 200
+        except Exception as e:
+            db.session.rollback()
+            return {"error": "An error occurred while deleting the variation type"}, 500
+
 # Register API routes
 api.add_resource(RoutineListResource, '/api/routines')
 api.add_resource(RoutineResource, '/api/routines/<int:routine_id>')
@@ -380,6 +447,8 @@ api.add_resource(ExerciseListResource, '/api/exercises')
 api.add_resource(ExerciseResource, '/api/exercises/<int:exercise_id>')
 api.add_resource(RoutineExerciseListResource, '/api/routines/<int:routine_id>/exercises')
 api.add_resource(RoutineExerciseResource, '/api/routines/<int:routine_id>/exercises/<int:exercise_id>')
+api.add_resource(VariationTypeListResource, '/api/variations')
+api.add_resource(VariationTypeResource, '/api/variations/<int:variation_type_id>')
 
 # For running the app directly
 if __name__ == '__main__':

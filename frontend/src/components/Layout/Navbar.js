@@ -8,11 +8,7 @@ const Navbar = () => {
       <div className="navbar-brand">
         <Link to="/">Workout Tracker</Link>
       </div>
-      
-      <div className="navbar-menu">
-        <Link to="/" className="navbar-item">Dashboard</Link>
-        <Link to="/exercises" className="navbar-item">Exercises</Link>
-      </div>
+
     </nav>
   );
 };

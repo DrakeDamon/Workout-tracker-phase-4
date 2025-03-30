@@ -17,6 +17,8 @@ const RoutineSchema = Yup.object().shape({
   exercises: Yup.array().of(
     Yup.object().shape({
       exercise_id: Yup.number().required('Exercise is required'),
+      name: Yup.string(),
+      variation_type: Yup.string().required('Variation type is required'),
       sets: Yup.number()
         .min(1, 'Sets must be at least 1')
         .required('Sets are required'),
@@ -34,6 +36,18 @@ const RoutineSchema = Yup.object().shape({
 const daysOfWeek = [
   'Monday', 'Tuesday', 'Wednesday', 'Thursday', 
   'Friday', 'Saturday', 'Sunday'
+];
+
+// Variation types
+const variationTypes = [
+  'Standard',
+  'Width Variation',
+  'Angle Variation',
+  'Grip Variation',
+  'Tempo Variation',
+  'Power',
+  'Endurance',
+  'Other'
 ];
 
 const CreateRoutine = () => {
@@ -64,8 +78,16 @@ const CreateRoutine = () => {
       // Step 2: Add exercises to the routine (if any)
       if (values.exercises && values.exercises.length > 0) {
         for (const exercise of values.exercises) {
+          const exerciseName = exercises.find(e => e.id === parseInt(exercise.exercise_id, 10))?.name || '';
+          
+          // Create variation name if not provided
+          const variationName = exercise.name || 
+            `${exerciseName} (${exercise.variation_type})`;
+          
           const exerciseData = {
             exercise_id: parseInt(exercise.exercise_id, 10),
+            name: variationName,
+            variation_type: exercise.variation_type,
             sets: parseInt(exercise.sets, 10),
             reps: parseInt(exercise.reps, 10),
             weight: exercise.weight ? parseFloat(exercise.weight) : null,
@@ -103,7 +125,7 @@ const CreateRoutine = () => {
           validationSchema={RoutineSchema}
           onSubmit={handleSubmit}
         >
-          {({ values, isSubmitting }) => (
+          {({ values, isSubmitting, setFieldValue }) => (
             <Form className="routine-form">
               <div className="form-group">
                 <label htmlFor="name">Routine Name*</label>
@@ -163,11 +185,29 @@ const CreateRoutine = () => {
                               name={`exercises[${index}].exercise_id`} 
                               className="form-control"
                               disabled={isSubmitting || isLoading.form}
+                              onChange={(e) => {
+                                // Standard Field onChange behavior
+                                setFieldValue(`exercises[${index}].exercise_id`, e.target.value);
+                                
+                                // Get the selected exercise name
+                                const selectedExercise = exercises.find(
+                                  ex => ex.id === parseInt(e.target.value, 10)
+                                );
+                                
+                                // Update variation name if there's a selected exercise
+                                if (selectedExercise) {
+                                  const variationType = values.exercises[index]?.variation_type || 'Standard';
+                                  setFieldValue(
+                                    `exercises[${index}].name`, 
+                                    `${selectedExercise.name} (${variationType})`
+                                  );
+                                }
+                              }}
                             >
                               <option value="">Select an exercise</option>
                               {exercises.map(exercise => (
                                 <option key={exercise.id} value={exercise.id}>
-                                  {exercise.name} ({exercise.muscle_group})
+                                  {exercise.name} {exercise.muscle_group ? `(${exercise.muscle_group})` : ''}
                                 </option>
                               ))}
                             </Field>
@@ -177,6 +217,54 @@ const CreateRoutine = () => {
                               className="field-error" 
                             />
                           </div>
+                          
+                          {/* Variation Type Field */}
+                          <div className="form-group">
+                            <label htmlFor={`exercises[${index}].variation_type`}>Variation Type*</label>
+                            <Field 
+                              as="select" 
+                              name={`exercises[${index}].variation_type`} 
+                              className="form-control"
+                              disabled={isSubmitting || isLoading.form}
+                              onChange={(e) => {
+                                // Standard Field onChange behavior
+                                setFieldValue(`exercises[${index}].variation_type`, e.target.value);
+                                
+                                // Get the selected exercise
+                                const exerciseId = values.exercises[index]?.exercise_id;
+                                const selectedExercise = exercises.find(
+                                  ex => ex.id === parseInt(exerciseId, 10)
+                                );
+                                
+                                // Update variation name if there's a selected exercise
+                                if (selectedExercise) {
+                                  setFieldValue(
+                                    `exercises[${index}].name`, 
+                                    `${selectedExercise.name} (${e.target.value})`
+                                  );
+                                }
+                              }}
+                            >
+                              <option value="">Select a variation</option>
+                              {variationTypes.map(type => (
+                                <option key={type} value={type}>{type}</option>
+                              ))}
+                            </Field>
+                            <ErrorMessage 
+                              name={`exercises[${index}].variation_type`} 
+                              component="div" 
+                              className="field-error" 
+                            />
+                            <small className="form-text text-muted">
+                              This determines how the exercise will be performed in your routine
+                            </small>
+                          </div>
+                          
+                          {/* Hidden field for variation name */}
+                          <Field 
+                            type="hidden"
+                            name={`exercises[${index}].name`} 
+                          />
                           
                           <div className="form-row">
                             <div className="form-group half">
@@ -252,6 +340,8 @@ const CreateRoutine = () => {
                         type="button" 
                         onClick={() => push({ 
                           exercise_id: '', 
+                          name: '',
+                          variation_type: 'Standard',
                           sets: 3, 
                           reps: 10, 
                           weight: '', 

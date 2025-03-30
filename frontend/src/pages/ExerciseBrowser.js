@@ -60,6 +60,26 @@ const ExerciseBrowser = () => {
     'Endurance',
     'Other'
   ];
+
+  // Predefined muscle groups and equipment options
+  const defaultMuscleGroups = [
+    'Chest',
+    'Back',
+    'Legs',
+    'Shoulders',
+    'Arms',
+    'Core',
+    'Cardio'
+  ];
+
+  const defaultEquipment = [
+    'Barbell',
+    'Dumbbell',
+    'Machine',
+    'Cable',
+    'Bodyweight',
+    'None'
+  ];
   
   // Effect to filter exercises when filters or exercises change
   useEffect(() => {
@@ -264,40 +284,9 @@ const ExerciseBrowser = () => {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          
-          <div className="filter-selects">
-            <select
-              className="filter-select"
-              value={muscleGroupFilter}
-              onChange={(e) => setMuscleGroupFilter(e.target.value)}
-            >
-              <option value="">All Muscle Groups</option>
-              {muscleGroups && muscleGroups.map(group => (
-                <option key={group} value={group}>{group}</option>
-              ))}
-            </select>
-            
-            <select
-              className="filter-select"
-              value={equipmentFilter}
-              onChange={(e) => setEquipmentFilter(e.target.value)}
-            >
-              <option value="">All Equipment</option>
-              {equipment && equipment.map(item => (
-                <option key={item} value={item}>{item}</option>
-              ))}
-            </select>
-            
-            <button 
-              className="btn btn-secondary"
-              onClick={resetFilters}
-            >
-              Reset Filters
-            </button>
-          </div>
         </div>
         
-        {/* Add Exercise to Routine Modal */}
+        {/* Add Exercise to Routine Modal with Variation Selection */}
         {showAddToRoutine && exerciseToAdd && (
           <div className="add-to-routine-modal">
             <div className="modal-header">
@@ -330,6 +319,7 @@ const ExerciseBrowser = () => {
                 </select>
               </div>
               
+              {/* Variation Type Selection - Enhanced */}
               <div className="form-group">
                 <label htmlFor="variation_type">Variation Type</label>
                 <select
@@ -343,6 +333,9 @@ const ExerciseBrowser = () => {
                     <option key={type} value={type}>{type}</option>
                   ))}
                 </select>
+                <small className="form-text text-muted">
+                  This determines how the exercise will be performed in your routine
+                </small>
               </div>
               
               <div className="form-group">
@@ -355,6 +348,9 @@ const ExerciseBrowser = () => {
                   value={variationData.name}
                   onChange={handleVariationChange}
                 />
+                <small className="form-text text-muted">
+                  A descriptive name for this variation (auto-generated based on type)
+                </small>
               </div>
               
               <div className="form-row">
@@ -410,6 +406,7 @@ const ExerciseBrowser = () => {
                   value={variationData.notes}
                   onChange={handleVariationChange}
                   rows="2"
+                  placeholder="Optional form cues or special instructions"
                 ></textarea>
               </div>
               
@@ -461,9 +458,10 @@ const ExerciseBrowser = () => {
                 disabled={isLoading.form}
               >
                 <option value="">Select Muscle Group</option>
-                {muscleGroups && muscleGroups.map(group => (
+                {defaultMuscleGroups.map(group => (
                   <option key={group} value={group}>{group}</option>
                 ))}
+                <option value="Other">Other</option>
               </select>
             </div>
             
@@ -478,9 +476,10 @@ const ExerciseBrowser = () => {
                 disabled={isLoading.form}
               >
                 <option value="">Select Equipment</option>
-                {equipment && equipment.map(item => (
+                {defaultEquipment.map(item => (
                   <option key={item} value={item}>{item}</option>
                 ))}
+                <option value="Other">Other</option>
               </select>
             </div>
             

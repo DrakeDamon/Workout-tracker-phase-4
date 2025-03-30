@@ -7,6 +7,7 @@ import Dashboard from './pages/Dashboard';
 import CreateRoutine from './pages/CreateRoutine';
 import RoutineDetail from './pages/RoutineDetail';
 import ExerciseBrowser from './pages/ExerciseBrowser';
+import VariationsManager from './pages/VariationsManager';
 
 // App Routes
 const AppRoutes = () => {
@@ -16,6 +17,7 @@ const AppRoutes = () => {
       <Route path="/routines/create" element={<CreateRoutine />} />
       <Route path="/routines/:routineId" element={<RoutineDetail />} />
       <Route path="/exercises" element={<ExerciseBrowser />} />
+      <Route path="/variations" element={<VariationsManager />} />
       
       {/* Catch all route - redirect to dashboard */}
       <Route path="*" element={<Navigate to="/" replace />} />

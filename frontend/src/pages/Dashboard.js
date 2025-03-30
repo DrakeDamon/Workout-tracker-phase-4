@@ -47,6 +47,9 @@ const Dashboard = () => {
           <Link to="/exercises" className="btn btn-secondary">
             Browse Exercise Library
           </Link>
+          <Link to="/variations" className="btn btn-secondary">
+            Manage Variations
+          </Link>
         </div>
         
         {isLoading.initial ? (
