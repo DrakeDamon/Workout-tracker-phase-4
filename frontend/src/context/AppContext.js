@@ -18,14 +18,16 @@ function AppProvider({ children }) {
   // Data states
   const [routines, setRoutines] = useState([]);
   const [exercises, setExercises] = useState([]);
+  const [routineExercises, setRoutineExercises] = useState({});
   const [muscleGroups, setMuscleGroups] = useState([]);
   const [equipment, setEquipment] = useState([]);
   const [currentRoutine, setCurrentRoutine] = useState(null);
+  const [dataLoaded, setDataLoaded] = useState(false);
   
   // Loading states
   const [isLoading, setIsLoading] = useState({
-    userData: false,
-    routine: false,
+    initial: true,
+    routineExercises: false,
     form: false,
     deletion: null,
     update: null
@@ -33,73 +35,96 @@ function AppProvider({ children }) {
   
   // Error states
   const [errors, setErrors] = useState({
-    userData: null,
-    routine: null,
+    initial: null,
+    routineExercises: null,
     form: null
   });
 
-  // Fetch all user data at once
-  const fetchUserData = useCallback(async () => {
-    setIsLoading(prev => ({ ...prev, userData: true }));
+  // Initial data load
+  const loadInitialData = useCallback(async () => {
     try {
-      const response = await api.getUserData();
-      // Update all state from the single response
-      setRoutines(response.routines || []);
-      setExercises(response.exercises || []);
-      setMuscleGroups(response.muscle_groups || []);
-      setEquipment(response.equipment || []);
+      // Fetch routines
+      const routinesData = await api.getRoutines();
+      setRoutines(routinesData);
       
-      // Clear errors
-      setErrors(prev => ({ ...prev, userData: null }));
+      // Fetch exercises
+      const exercisesData = await api.getExercises();
+      setExercises(exercisesData);
+      
+      // Extract unique muscle groups and equipment
+      const uniqueMuscleGroups = [...new Set(exercisesData.map(exercise => exercise.muscle_group).filter(Boolean))];
+      const uniqueEquipment = [...new Set(exercisesData.map(exercise => exercise.equipment).filter(Boolean))];
+      setMuscleGroups(uniqueMuscleGroups);
+      setEquipment(uniqueEquipment);
+      
+      // Clear any errors
+      setErrors(prev => ({ ...prev, initial: null }));
+      setDataLoaded(true);
     } catch (err) {
-      console.error('Error fetching user data:', err);
-      setErrors(prev => ({ ...prev, userData: 'Failed to load data' }));
+      console.error('Error loading initial data:', err);
+      setErrors(prev => ({ ...prev, initial: 'Failed to load data. Please refresh the page.' }));
     } finally {
-      setIsLoading(prev => ({ ...prev, userData: false }));
+      setIsLoading(prev => ({ ...prev, initial: false }));
     }
   }, []);
 
-  // Fetch data on initial load
+  // Load data on initial mount
   useEffect(() => {
-    fetchUserData();
-  }, [fetchUserData]);
+    loadInitialData();
+  }, [loadInitialData]);
 
-  // Routine CRUD operations
+  // Routine functions
   const getRoutineById = (routineId) => {
-    return routines.find(routine => routine.id === parseInt(routineId, 10));
-  };
-
-  const loadRoutineDetails = async (routineId) => {
-    // First check if we already have the routine in state
-    const existingRoutine = getRoutineById(routineId);
-    if (existingRoutine) {
-      setCurrentRoutine(existingRoutine);
-      return existingRoutine;
-    }
+    const parsedId = parseInt(routineId, 10);
+    const routine = routines.find(r => r.id === parsedId);
     
-    // If not in state, fetch from API
-    setIsLoading(prev => ({ ...prev, routine: true }));
-    try {
-      const routine = await api.getRoutine(routineId);
-      
-      // Update current routine
+    if (routine) {
+      // Set as current routine
       setCurrentRoutine(routine);
       
-      // Also update the routine in the routines array
-      setRoutines(prevRoutines => 
-        prevRoutines.map(r => r.id === parseInt(routineId, 10) ? routine : r)
-      );
+      // Load the exercises for this routine if not already loaded
+      if (!routineExercises[parsedId]) {
+        loadRoutineExercises(parsedId);
+      } else {
+        // Return the routine with its exercises
+        return {
+          ...routine,
+          exercises: routineExercises[parsedId] || []
+        };
+      }
+    }
+    
+    return routine;
+  };
+
+  // Load exercises for a specific routine
+  const loadRoutineExercises = async (routineId) => {
+    setIsLoading(prev => ({ ...prev, routineExercises: true }));
+    try {
+      const exercises = await api.getRoutineExercises(routineId);
       
-      // Clear errors
-      setErrors(prev => ({ ...prev, routine: null }));
+      // Update routineExercises state
+      setRoutineExercises(prev => ({
+        ...prev,
+        [routineId]: exercises
+      }));
       
-      return routine;
+      // If this is the current routine, update it with exercises
+      if (currentRoutine && currentRoutine.id === parseInt(routineId, 10)) {
+        setCurrentRoutine(prev => ({
+          ...prev,
+          exercises: exercises
+        }));
+      }
+      
+      setErrors(prev => ({ ...prev, routineExercises: null }));
+      return exercises;
     } catch (err) {
-      console.error('Error loading routine details:', err);
-      setErrors(prev => ({ ...prev, routine: 'Failed to load routine' }));
-      return null;
+      console.error(`Error loading exercises for routine ${routineId}:`, err);
+      setErrors(prev => ({ ...prev, routineExercises: `Failed to load exercises for this routine` }));
+      return [];
     } finally {
-      setIsLoading(prev => ({ ...prev, routine: false }));
+      setIsLoading(prev => ({ ...prev, routineExercises: false }));
     }
   };
 
@@ -110,6 +135,12 @@ function AppProvider({ children }) {
       
       // Update local state
       setRoutines(prev => [...prev, newRoutine]);
+      
+      // Initialize empty exercises array for this routine
+      setRoutineExercises(prev => ({
+        ...prev,
+        [newRoutine.id]: []
+      }));
       
       // Clear errors
       setErrors(prev => ({ ...prev, form: null }));
@@ -136,7 +167,11 @@ function AppProvider({ children }) {
       
       // Update currentRoutine if it's the active one
       if (currentRoutine && currentRoutine.id === parseInt(routineId, 10)) {
-        setCurrentRoutine(updatedRoutine);
+        setCurrentRoutine(prev => ({
+          ...prev,
+          ...updatedRoutine,
+          exercises: prev.exercises // Preserve exercises
+        }));
       }
       
       // Clear errors
@@ -162,6 +197,13 @@ function AppProvider({ children }) {
         prevRoutines.filter(r => r.id !== parseInt(routineId, 10))
       );
       
+      // Remove exercises for this routine
+      setRoutineExercises(prev => {
+        const newState = { ...prev };
+        delete newState[routineId];
+        return newState;
+      });
+      
       // Clear current routine if it was deleted
       if (currentRoutine && currentRoutine.id === parseInt(routineId, 10)) {
         setCurrentRoutine(null);
@@ -180,7 +222,7 @@ function AppProvider({ children }) {
     }
   };
 
-  // Exercise CRUD operations
+  // Exercise functions
   const createExercise = async (exerciseData) => {
     setIsLoading(prev => ({ ...prev, form: true }));
     try {
@@ -188,6 +230,15 @@ function AppProvider({ children }) {
       
       // Update local state
       setExercises(prev => [...prev, newExercise]);
+      
+      // Update muscle groups and equipment lists if needed
+      if (newExercise.muscle_group && !muscleGroups.includes(newExercise.muscle_group)) {
+        setMuscleGroups(prev => [...prev, newExercise.muscle_group]);
+      }
+      
+      if (newExercise.equipment && !equipment.includes(newExercise.equipment)) {
+        setEquipment(prev => [...prev, newExercise.equipment]);
+      }
       
       // Clear errors
       setErrors(prev => ({ ...prev, form: null }));
@@ -202,31 +253,27 @@ function AppProvider({ children }) {
     }
   };
 
-  // Routine Exercise operations
+  // Routine Exercise functions (representing the many-through relationship)
   const addExerciseToRoutine = async (routineId, exerciseData) => {
     setIsLoading(prev => ({ ...prev, form: true }));
     try {
       const newRoutineExercise = await api.addExerciseToRoutine(routineId, exerciseData);
       
-      // Update routine in state
-      const updatedRoutines = routines.map(routine => {
-        if (routine.id === parseInt(routineId, 10)) {
-          return {
-            ...routine,
-            routine_exercises: [...(routine.routine_exercises || []), newRoutineExercise]
-          };
-        }
-        return routine;
+      // Update routineExercises state
+      setRoutineExercises(prev => {
+        const routineExerciseList = prev[routineId] || [];
+        return {
+          ...prev,
+          [routineId]: [...routineExerciseList, newRoutineExercise]
+        };
       });
       
-      setRoutines(updatedRoutines);
-      
-      // Update current routine if it's affected
+      // Update current routine if it's the active one
       if (currentRoutine && currentRoutine.id === parseInt(routineId, 10)) {
-        setCurrentRoutine({
-          ...currentRoutine,
-          routine_exercises: [...(currentRoutine.routine_exercises || []), newRoutineExercise]
-        });
+        setCurrentRoutine(prev => ({
+          ...prev,
+          exercises: [...(prev.exercises || []), newRoutineExercise]
+        }));
       }
       
       // Clear errors
@@ -242,36 +289,30 @@ function AppProvider({ children }) {
     }
   };
 
-  const updateRoutineExercise = async (routineExerciseId, data) => {
-    setIsLoading(prev => ({ ...prev, update: routineExerciseId }));
+  const updateRoutineExercise = async (routineId, exerciseId, data) => {
+    setIsLoading(prev => ({ ...prev, update: `${routineId}-${exerciseId}` }));
     try {
-      const updatedRoutineExercise = await api.updateRoutineExercise(routineExerciseId, data);
+      const updatedRoutineExercise = await api.updateRoutineExercise(routineId, exerciseId, data);
       
-      // Update routines array
-      const updatedRoutines = routines.map(routine => {
-        if (routine.routine_exercises && routine.routine_exercises.some(re => re.id === routineExerciseId)) {
-          return {
-            ...routine,
-            routine_exercises: routine.routine_exercises.map(re => 
-              re.id === routineExerciseId ? updatedRoutineExercise : re
-            )
-          };
-        }
-        return routine;
+      // Update routineExercises state
+      setRoutineExercises(prev => {
+        const routineExerciseList = prev[routineId] || [];
+        return {
+          ...prev,
+          [routineId]: routineExerciseList.map(re => 
+            re.exercise.id === exerciseId ? updatedRoutineExercise : re
+          )
+        };
       });
       
-      setRoutines(updatedRoutines);
-      
-      // Update current routine if it's affected
-      if (currentRoutine && currentRoutine.routine_exercises) {
-        if (currentRoutine.routine_exercises.some(re => re.id === routineExerciseId)) {
-          setCurrentRoutine({
-            ...currentRoutine,
-            routine_exercises: currentRoutine.routine_exercises.map(re => 
-              re.id === routineExerciseId ? updatedRoutineExercise : re
-            )
-          });
-        }
+      // Update current routine if it's the active one
+      if (currentRoutine && currentRoutine.id === parseInt(routineId, 10)) {
+        setCurrentRoutine(prev => ({
+          ...prev,
+          exercises: (prev.exercises || []).map(re => 
+            re.exercise.id === exerciseId ? updatedRoutineExercise : re
+          )
+        }));
       }
       
       // Clear errors
@@ -279,38 +320,34 @@ function AppProvider({ children }) {
       
       return updatedRoutineExercise;
     } catch (err) {
-      console.error('Error updating routine exercise:', err);
-      setErrors(prev => ({ ...prev, form: err.message || 'Failed to update exercise' }));
+      console.error('Error updating exercise in routine:', err);
+      setErrors(prev => ({ ...prev, form: err.message || 'Failed to update exercise in routine' }));
       return null;
     } finally {
       setIsLoading(prev => ({ ...prev, update: null }));
     }
   };
 
-  const deleteRoutineExercise = async (routineExerciseId) => {
-    setIsLoading(prev => ({ ...prev, deletion: routineExerciseId }));
+  const removeExerciseFromRoutine = async (routineId, exerciseId) => {
+    setIsLoading(prev => ({ ...prev, deletion: `${routineId}-${exerciseId}` }));
     try {
-      await api.deleteRoutineExercise(routineExerciseId);
+      await api.removeExerciseFromRoutine(routineId, exerciseId);
       
-      // Update routines array
-      const updatedRoutines = routines.map(routine => {
-        if (routine.routine_exercises) {
-          return {
-            ...routine,
-            routine_exercises: routine.routine_exercises.filter(re => re.id !== routineExerciseId)
-          };
-        }
-        return routine;
+      // Update routineExercises state
+      setRoutineExercises(prev => {
+        const routineExerciseList = prev[routineId] || [];
+        return {
+          ...prev,
+          [routineId]: routineExerciseList.filter(re => re.exercise.id !== exerciseId)
+        };
       });
       
-      setRoutines(updatedRoutines);
-      
-      // Update current routine if it's affected
-      if (currentRoutine && currentRoutine.routine_exercises) {
-        setCurrentRoutine({
-          ...currentRoutine,
-          routine_exercises: currentRoutine.routine_exercises.filter(re => re.id !== routineExerciseId)
-        });
+      // Update current routine if it's the active one
+      if (currentRoutine && currentRoutine.id === parseInt(routineId, 10)) {
+        setCurrentRoutine(prev => ({
+          ...prev,
+          exercises: (prev.exercises || []).filter(re => re.exercise.id !== exerciseId)
+        }));
       }
       
       // Clear errors
@@ -318,8 +355,8 @@ function AppProvider({ children }) {
       
       return true;
     } catch (err) {
-      console.error('Error deleting routine exercise:', err);
-      setErrors(prev => ({ ...prev, form: err.message || 'Failed to delete exercise' }));
+      console.error('Error removing exercise from routine:', err);
+      setErrors(prev => ({ ...prev, form: err.message || 'Failed to remove exercise from routine' }));
       return false;
     } finally {
       setIsLoading(prev => ({ ...prev, deletion: null }));
@@ -331,20 +368,19 @@ function AppProvider({ children }) {
     // Application data state
     routines,
     exercises,
+    routineExercises,
     muscleGroups,
     equipment,
     currentRoutine,
+    dataLoaded,
     
     // Loading and error states
     isLoading,
     errors,
     
-    // Data loading function
-    fetchUserData,
-    
     // Routine functions
     getRoutineById,
-    loadRoutineDetails,
+    loadRoutineExercises,
     createRoutine,
     updateRoutine,
     deleteRoutine,
@@ -355,7 +391,7 @@ function AppProvider({ children }) {
     // Routine Exercise functions
     addExerciseToRoutine,
     updateRoutineExercise,
-    deleteRoutineExercise
+    removeExerciseFromRoutine
   };
 
   return (

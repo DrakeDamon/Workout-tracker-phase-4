@@ -44,11 +44,6 @@ const fetchWithErrorHandling = async (url, options = {}) => {
 
 // API methods
 const api = {
-  // GET all data at once (user data, routines, exercises, etc.)
-  getUserData: async () => {
-    return fetchWithErrorHandling(`${API_BASE_URL}/api/user-data`);
-  },
-
   // Routine endpoints
   getRoutines: async () => {
     return fetchWithErrorHandling(`${API_BASE_URL}/api/routines`);
@@ -100,7 +95,15 @@ const api = {
     });
   },
 
-  // Routine Exercise endpoints
+  // Routine Exercise endpoints (showing the many-through relationship)
+  getRoutineExercises: async (routineId) => {
+    return fetchWithErrorHandling(`${API_BASE_URL}/api/routines/${routineId}/exercises`);
+  },
+
+  getRoutineExercise: async (routineId, exerciseId) => {
+    return fetchWithErrorHandling(`${API_BASE_URL}/api/routines/${routineId}/exercises/${exerciseId}`);
+  },
+
   addExerciseToRoutine: async (routineId, exerciseData) => {
     return fetchWithErrorHandling(`${API_BASE_URL}/api/routines/${routineId}/exercises`, {
       method: 'POST',
@@ -108,15 +111,15 @@ const api = {
     });
   },
 
-  updateRoutineExercise: async (routineExerciseId, data) => {
-    return fetchWithErrorHandling(`${API_BASE_URL}/api/routine-exercises/${routineExerciseId}`, {
+  updateRoutineExercise: async (routineId, exerciseId, data) => {
+    return fetchWithErrorHandling(`${API_BASE_URL}/api/routines/${routineId}/exercises/${exerciseId}`, {
       method: 'PUT',
       body: JSON.stringify(data),
     });
   },
 
-  deleteRoutineExercise: async (routineExerciseId) => {
-    return fetchWithErrorHandling(`${API_BASE_URL}/api/routine-exercises/${routineExerciseId}`, {
+  removeExerciseFromRoutine: async (routineId, exerciseId) => {
+    return fetchWithErrorHandling(`${API_BASE_URL}/api/routines/${routineId}/exercises/${exerciseId}`, {
       method: 'DELETE',
     });
   }

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
 import Navbar from '../components/Layout/Navbar';
@@ -10,22 +10,8 @@ const Dashboard = () => {
     routines,
     isLoading,
     errors,
-    fetchUserData
+    dataLoaded
   } = useAppContext();
- 
-// reload when back to dashboard only because state context would be reset
-  useEffect(() => {
-    if (routines.length === 0 && !isLoading.userData) {
-      fetchUserData();
-    }
-  }, [routines.length, isLoading.userData, fetchUserData]);
-  
-  useEffect(() => {
-    // Check if we need to refresh data
-    if (routines.length === 0 && !isLoading.userData) {
-      fetchUserData();
-    }
-  }, [routines.length, isLoading.userData, fetchUserData]);
   
   // Sort routines by day of week
   const sortedRoutines = useMemo(() => {
@@ -63,10 +49,10 @@ const Dashboard = () => {
           </Link>
         </div>
         
-        {isLoading.userData ? (
+        {isLoading.initial ? (
           <div className="loading-spinner">Loading your routines...</div>
-        ) : errors.userData ? (
-          <div className="error-message">{errors.userData}</div>
+        ) : errors.initial ? (
+          <div className="error-message">{errors.initial}</div>
         ) : routines.length === 0 ? (
           <div className="empty-state">
             <div className="empty-state-icon">📋</div>

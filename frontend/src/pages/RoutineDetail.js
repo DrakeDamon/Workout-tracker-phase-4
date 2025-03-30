@@ -8,12 +8,16 @@ const RoutineDetail = () => {
   const { routineId } = useParams();
   const navigate = useNavigate();
   const { 
-    loadRoutineDetails, 
+    getRoutineById, 
     currentRoutine, 
     updateRoutine,
     updateRoutineExercise,
+    deleteRoutineExercise,
+    addExerciseToRoutine,
+    exercises,
+    variations,
     isLoading, 
-    errors 
+    errors
   } = useAppContext();
   
   // Form state for routine
@@ -23,8 +27,8 @@ const RoutineDetail = () => {
     description: ''
   });
   
-  // Form state for exercises
-  const [exerciseFormData, setExerciseFormData] = useState([]);
+  // Form state for variations in this routine
+  const [variationFormData, setVariationFormData] = useState([]);
   
   // Day of week options
   const daysOfWeek = [
@@ -34,31 +38,30 @@ const RoutineDetail = () => {
   
   // Load routine details on component mount
   useEffect(() => {
-    const fetchRoutine = async () => {
-      const routine = await loadRoutineDetails(routineId);
-      if (routine) {
-        setRoutineFormData({
-          name: routine.name || '',
-          day_of_week: routine.day_of_week || '',
-          description: routine.description || ''
-        });
-        
-        // Initialize exercise form data
-        if (routine.routine_exercises) {
-          const exerciseData = routine.routine_exercises.map(re => ({
-            id: re.id,
-            sets: re.sets || '',
-            reps: re.reps || '',
-            weight: re.weight || '',
-            notes: re.notes || ''
-          }));
-          setExerciseFormData(exerciseData);
-        }
-      }
-    };
+    const routine = getRoutineById(routineId);
     
-    fetchRoutine();
-  }, [routineId, loadRoutineDetails]);
+    if (routine) {
+      setRoutineFormData({
+        name: routine.name || '',
+        day_of_week: routine.day_of_week || '',
+        description: routine.description || ''
+      });
+      
+      // Initialize variation form data from routine's variations
+      if (routine.variations) {
+        const variationsData = routine.variations.map(variation => ({
+          id: variation.id,
+          exercise_id: variation.exercise_id,
+          variation_id: variation.id, // Currently selected variation
+          sets: variation.sets || '',
+          reps: variation.reps || '',
+          weight: variation.weight || '',
+          notes: variation.notes || ''
+        }));
+        setVariationFormData(variationsData);
+      }
+    }
+  }, [routineId, getRoutineById]);
   
   // Handle routine input changes
   const handleRoutineChange = (e) => {
@@ -69,52 +72,107 @@ const RoutineDetail = () => {
     });
   };
   
-  // Handle exercise input changes
-  const handleExerciseChange = (index, field, value) => {
-    const updatedExercises = [...exerciseFormData];
-    updatedExercises[index] = {
-      ...updatedExercises[index],
+  // Handle variation input changes
+  const handleVariationChange = (index, field, value) => {
+    const updatedVariations = [...variationFormData];
+    updatedVariations[index] = {
+      ...updatedVariations[index],
       [field]: value
     };
-    setExerciseFormData(updatedExercises);
+    setVariationFormData(updatedVariations);
+  };
+  
+  // Handle variation selection change
+  const handleVariationSelect = async (index, newVariationId) => {
+    const variationToUpdate = variationFormData[index];
+    const currentVariationId = variationToUpdate.id;
+    
+    // If selecting the same variation, do nothing
+    if (currentVariationId === parseInt(newVariationId, 10)) {
+      return;
+    }
+    
+    try {
+      // First, delete the current variation from the routine
+      await deleteRoutineExercise(currentVariationId);
+      
+      // Find the new variation to add
+      const newVariation = variations.find(v => v.id === parseInt(newVariationId, 10));
+      
+      // Add the new variation to the routine
+      const addedVariation = await addExerciseToRoutine(routineId, {
+        exercise_id: variationToUpdate.exercise_id,
+        variation_id: newVariationId,
+        name: newVariation ? newVariation.name : "Selected Variation",
+        sets: variationToUpdate.sets,
+        reps: variationToUpdate.reps,
+        weight: variationToUpdate.weight,
+        notes: variationToUpdate.notes
+      });
+      
+      // Update the form data with the new variation
+      const updatedVariations = [...variationFormData];
+      updatedVariations[index] = {
+        ...updatedVariations[index],
+        id: addedVariation.id,
+        variation_id: addedVariation.id
+      };
+      setVariationFormData(updatedVariations);
+      
+      // Refresh the routine
+      getRoutineById(routineId);
+      
+    } catch (error) {
+      console.error('Error changing variation:', error);
+      alert('Failed to change variation. Please try again.');
+    }
   };
   
   // Handle routine form submission
-const handleRoutineSubmit = async (e) => {
-  e.preventDefault();
-  
-  try {
-    // Update the routine first
-    const updatedRoutine = await updateRoutine(routineId, routineFormData);
+  const handleRoutineSubmit = async (e) => {
+    e.preventDefault();
     
-    // Update exercises one by one
-    for (const exercise of exerciseFormData) {
-      // Create a clean data object with only the fields your API expects
-      const exerciseData = {
-        sets: parseInt(exercise.sets) || 0,
-        reps: parseInt(exercise.reps) || 0,
-        weight: exercise.weight ? parseFloat(exercise.weight) : null,
-        notes: exercise.notes || ''
-      };
+    try {
+      // Update the routine first
+      const updatedRoutine = await updateRoutine(routineId, routineFormData);
       
-      await updateRoutineExercise(exercise.id, exerciseData);
+      // Update variations one by one
+      for (const variation of variationFormData) {
+        // Create a clean data object with only the fields your API expects
+        const variationData = {
+          sets: parseInt(variation.sets) || 0,
+          reps: parseInt(variation.reps) || 0,
+          weight: variation.weight ? parseFloat(variation.weight) : null,
+          notes: variation.notes || ''
+        };
+        
+        await updateRoutineExercise(variation.id, variationData);
+      }
+      
+      alert('Routine updated successfully!');
+      navigate('/');
+    } catch (error) {
+      console.error('Error updating routine:', error);
+      alert('Failed to update routine. Please try again.');
     }
-    
-    // Use proper navigation after all updates complete
-    alert('Routine updated successfully!');
-    navigate('/');
-  } catch (error) {
-    console.error('Error updating routine:', error);
-    alert('Failed to update routine. Please try again.');
-  }
-};
+  };
   
   // Handle cancel
   const handleCancel = () => {
-    navigate('/'); // Navigate to dashboard without updating
+    navigate('/');
   };
   
-  if (isLoading.routine) {
+  // Find exercise details for a given exercise ID
+  const findExercise = (exerciseId) => {
+    return exercises.find(ex => ex.id === exerciseId);
+  };
+  
+  // Get all variations for a given exercise
+  const getExerciseVariations = (exerciseId) => {
+    return variations.filter(v => v.exercise_id === exerciseId);
+  };
+  
+  if (isLoading.initial) {
     return (
       <div className="app-container">
         <Navbar />
@@ -125,13 +183,13 @@ const handleRoutineSubmit = async (e) => {
     );
   }
   
-  if (errors.routine) {
+  if (errors.initial) {
     return (
       <div className="app-container">
         <Navbar />
         <div className="routine-detail-container error">
           <div className="alert alert-danger">
-            {errors.routine}
+            {errors.initial}
           </div>
           <Link to="/" className="btn btn-primary">
             Back to Dashboard
@@ -156,14 +214,38 @@ const handleRoutineSubmit = async (e) => {
     );
   }
   
+  // Group variations by exercise
+  const exerciseVariations = {};
+  
+  if (currentRoutine.variations) {
+    currentRoutine.variations.forEach(variation => {
+      // In our model, each exercise should appear only once in a routine
+      // So we're just storing the current variation for each exercise
+      exerciseVariations[variation.exercise_id] = variation;
+    });
+  }
+  
   return (
     <div className="app-container">
       <Navbar />
       
       <div className="routine-detail-container">
-        <div className="routine-form">
-          <h1>Routine Details</h1>
-          <form onSubmit={handleRoutineSubmit}>
+        <div className="routine-header">
+          <h1>{currentRoutine.name}</h1>
+          {currentRoutine.day_of_week && (
+            <span className="day-badge">{currentRoutine.day_of_week}</span>
+          )}
+        </div>
+        
+        {currentRoutine.description && (
+          <div className="routine-description">
+            <p>{currentRoutine.description}</p>
+          </div>
+        )}
+        
+        <form onSubmit={handleRoutineSubmit}>
+          <div className="edit-section">
+            <h2>Edit Routine</h2>
             <div className="form-group">
               <label htmlFor="name">Routine Name*</label>
               <input
@@ -204,99 +286,136 @@ const handleRoutineSubmit = async (e) => {
                 rows="4"
               ></textarea>
             </div>
+          </div>
+          
+          <div className="exercises-section">
+            <h2>Exercises in This Routine</h2>
             
-            <h2>Exercises</h2>
-            
-            {currentRoutine.routine_exercises && currentRoutine.routine_exercises.length > 0 ? (
+            {Object.keys(exerciseVariations).length > 0 ? (
               <div className="exercise-list">
-                {currentRoutine.routine_exercises.map((routineExercise, index) => (
-                  <div key={routineExercise.id} className="exercise-card">
-                    <h3 className="exercise-name">{routineExercise.exercise.name}</h3>
-                    
-                    <div className="exercise-details">
-                      <div className="form-group">
-                        <label>Sets</label>
-                        <input
-                          type="number"
-                          className="form-control"
-                          value={exerciseFormData[index]?.sets || ''}
-                          onChange={(e) => handleExerciseChange(index, 'sets', e.target.value)}
-                          min="1"
-                        />
+                {Object.entries(exerciseVariations).map(([exerciseId, currentVariation], index) => {
+                  const exercise = findExercise(parseInt(exerciseId, 10));
+                  const allVariations = getExerciseVariations(parseInt(exerciseId, 10));
+                  
+                  return (
+                    <div key={exerciseId} className="exercise-card">
+                      <div className="exercise-header">
+                        <h3 className="exercise-name">{exercise ? exercise.name : 'Unknown Exercise'}</h3>
+                        {exercise?.muscle_group && (
+                          <span className="exercise-muscle">{exercise.muscle_group}</span>
+                        )}
                       </div>
                       
-                      <div className="form-group">
-                        <label>Reps</label>
-                        <input
-                          type="number"
+                      <div className="variation-selection">
+                        <label htmlFor={`variation-select-${index}`}>
+                          Select Variation:
+                        </label>
+                        <select
+                          id={`variation-select-${index}`}
                           className="form-control"
-                          value={exerciseFormData[index]?.reps || ''}
-                          onChange={(e) => handleExerciseChange(index, 'reps', e.target.value)}
-                          min="1"
-                        />
+                          value={currentVariation.id}
+                          onChange={(e) => handleVariationSelect(index, e.target.value)}
+                        >
+                          {allVariations.map(variation => (
+                            <option key={variation.id} value={variation.id}>
+                              {variation.name} {variation.variation_type ? `(${variation.variation_type})` : ''}
+                            </option>
+                          ))}
+                        </select>
                       </div>
                       
-                      <div className="form-group">
-                        <label>Weight (lbs)</label>
-                        <input
-                          type="number"
-                          className="form-control"
-                          value={exerciseFormData[index]?.weight || ''}
-                          onChange={(e) => handleExerciseChange(index, 'weight', e.target.value)}
-                          min="0"
-                          step="0.5"
-                        />
+                      <div className="variation-info">
+                        <h4>Current Variation: {currentVariation.name}</h4>
+                        {currentVariation.variation_type && (
+                          <span className="variation-type">{currentVariation.variation_type}</span>
+                        )}
+                        
+                        {currentVariation.description && (
+                          <div className="variation-description">
+                            <p>{currentVariation.description}</p>
+                          </div>
+                        )}
+                        
+                        {exercise?.equipment && (
+                          <div className="exercise-equipment">
+                            <span className="equipment-label">Equipment:</span> {exercise.equipment}
+                          </div>
+                        )}
                       </div>
                       
-                      <div className="form-group">
-                        <label>Notes</label>
-                        <textarea
-                          className="form-control"
-                          value={exerciseFormData[index]?.notes || ''}
-                          onChange={(e) => handleExerciseChange(index, 'notes', e.target.value)}
-                          rows="2"
-                        ></textarea>
+                      <div className="exercise-details">
+                        <div className="form-group">
+                          <label>Sets</label>
+                          <input
+                            type="number"
+                            className="form-control"
+                            value={variationFormData[index]?.sets || ''}
+                            onChange={(e) => handleVariationChange(index, 'sets', e.target.value)}
+                            min="1"
+                          />
+                        </div>
+                        
+                        <div className="form-group">
+                          <label>Reps</label>
+                          <input
+                            type="number"
+                            className="form-control"
+                            value={variationFormData[index]?.reps || ''}
+                            onChange={(e) => handleVariationChange(index, 'reps', e.target.value)}
+                            min="1"
+                          />
+                        </div>
+                        
+                        <div className="form-group">
+                          <label>Weight (lbs)</label>
+                          <input
+                            type="number"
+                            className="form-control"
+                            value={variationFormData[index]?.weight || ''}
+                            onChange={(e) => handleVariationChange(index, 'weight', e.target.value)}
+                            min="0"
+                            step="0.5"
+                          />
+                        </div>
+                        
+                        <div className="form-group">
+                          <label>Notes</label>
+                          <textarea
+                            className="form-control"
+                            value={variationFormData[index]?.notes || ''}
+                            onChange={(e) => handleVariationChange(index, 'notes', e.target.value)}
+                            rows="2"
+                          ></textarea>
+                        </div>
                       </div>
                     </div>
-                    
-                    {routineExercise.exercise.muscle_group && (
-                      <div className="exercise-muscle">
-                        Muscle Group: {routineExercise.exercise.muscle_group}
-                      </div>
-                    )}
-                    
-                    {routineExercise.exercise.equipment && (
-                      <div className="exercise-equipment">
-                        Equipment: {routineExercise.exercise.equipment}
-                      </div>
-                    )}
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             ) : (
               <div className="no-exercises">
                 <p>No exercises added to this routine yet.</p>
               </div>
             )}
-            
-            <div className="form-actions">
-              <button 
-                type="button" 
-                className="btn btn-secondary"
-                onClick={handleCancel}
-              >
-                Cancel
-              </button>
-              <button 
-                type="submit" 
-                className="btn btn-primary"
-                disabled={isLoading.update}
-              >
-                {isLoading.update ? 'Saving...' : 'Save Changes'}
-              </button>
-            </div>
-          </form>
-        </div>
+          </div>
+          
+          <div className="form-actions">
+            <button 
+              type="button" 
+              className="btn btn-secondary"
+              onClick={handleCancel}
+            >
+              Cancel
+            </button>
+            <button 
+              type="submit" 
+              className="btn btn-primary"
+              disabled={isLoading.update}
+            >
+              {isLoading.update ? 'Saving...' : 'Save Changes'}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );
