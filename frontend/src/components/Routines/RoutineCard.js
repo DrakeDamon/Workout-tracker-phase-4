@@ -6,15 +6,25 @@ import '../../styles/RoutineCard.css';
 const RoutineCard = ({ routine }) => {
   const { deleteRoutine, isLoading } = useAppContext();
   
+  // Debug logging
+  console.log('Rendering RoutineCard with routine:', routine);
+  
   // Check if this specific routine is being deleted
   const isDeletingThisRoutine = isLoading.deletion === routine.id;
   
-  // Count exercises
-  const exerciseCount = routine.routine_exercises ? routine.routine_exercises.length : 0;
-
+  // Count exercises - handle the different possible ways exercises might be available
+  const exerciseCount = routine.exercises 
+    ? routine.exercises.length 
+    : routine.routine_exercises 
+      ? routine.routine_exercises.length
+      : routine.variations
+        ? routine.variations.length
+        : 0;
+  
   const handleDelete = async () => {
     if (window.confirm(`Are you sure you want to delete "${routine.name}"?`)) {
       try {
+        console.log('Deleting routine:', routine.id);
         await deleteRoutine(routine.id);
         // No need to do anything else, the state will be updated by the context
       } catch (error) {

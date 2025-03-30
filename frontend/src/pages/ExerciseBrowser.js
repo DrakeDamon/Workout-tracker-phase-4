@@ -1,33 +1,69 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
 import Navbar from '../components/Layout/Navbar';
 import '../styles/ExerciseBrowser.css';
 
 const ExerciseBrowser = () => {
-  const { exercises, muscleGroups, equipment, isLoading, createExercise, errors } = useAppContext();
+  const { 
+    exercises, 
+    muscleGroups, 
+    equipment, 
+    routines,
+    isLoading, 
+    createExercise,
+    addExerciseToRoutine, 
+    errors 
+  } = useAppContext();
+  
   const navigate = useNavigate();
   
   // Filter state
   const [searchTerm, setSearchTerm] = useState('');
   const [muscleGroupFilter, setMuscleGroupFilter] = useState('');
   const [equipmentFilter, setEquipmentFilter] = useState('');
+  const [selectedRoutineId, setSelectedRoutineId] = useState('');
   
-  // Form state
+  // Add exercise to routine state
+  const [showAddToRoutine, setShowAddToRoutine] = useState(false);
+  const [exerciseToAdd, setExerciseToAdd] = useState(null);
+  const [variationData, setVariationData] = useState({
+    name: '',
+    variation_type: 'Standard',
+    sets: 3,
+    reps: 10,
+    weight: '',
+    notes: ''
+  });
+  
+  // Form state for creating new exercise
   const [formData, setFormData] = useState({
     name: '',
     description: '',
     muscle_group: '',
     equipment: ''
   });
+  
   const [validationErrors, setValidationErrors] = useState({});
   
   // Filtered exercises
   const [filteredExercises, setFilteredExercises] = useState([]);
   
+  // Variation types
+  const variationTypes = [
+    'Standard',
+    'Width Variation',
+    'Angle Variation',
+    'Grip Variation',
+    'Tempo Variation',
+    'Power',
+    'Endurance',
+    'Other'
+  ];
+  
   // Effect to filter exercises when filters or exercises change
   useEffect(() => {
-    if (!exercises) return;
+    if (!exercises || !Array.isArray(exercises)) return;
     
     let result = [...exercises];
     
@@ -69,6 +105,94 @@ const ExerciseBrowser = () => {
       ...formData,
       [name]: value
     });
+  };
+  
+  // Handle variation data input changes
+  const handleVariationChange = (e) => {
+    const { name, value } = e.target;
+    setVariationData({
+      ...variationData,
+      [name]: value
+    });
+    
+    // Update name if variation type changes
+    if (name === 'variation_type' && exerciseToAdd) {
+      setVariationData(prev => ({
+        ...prev,
+        name: `${exerciseToAdd.name} (${value})`
+      }));
+    }
+  };
+  
+  // Handle adding exercise to routine
+  const handleAddToRoutine = async (e) => {
+    e.preventDefault();
+    
+    if (!selectedRoutineId) {
+      alert('Please select a routine');
+      return;
+    }
+    
+    if (!exerciseToAdd) {
+      alert('No exercise selected');
+      return;
+    }
+    
+    const exerciseData = {
+      exercise_id: exerciseToAdd.id,
+      name: variationData.name,
+      variation_type: variationData.variation_type,
+      sets: parseInt(variationData.sets),
+      reps: parseInt(variationData.reps),
+      weight: variationData.weight ? parseFloat(variationData.weight) : null,
+      notes: variationData.notes
+    };
+    
+    try {
+      console.log(`Adding exercise ${exerciseToAdd.id} to routine ${selectedRoutineId}:`, exerciseData);
+      
+      const result = await addExerciseToRoutine(selectedRoutineId, exerciseData);
+      console.log('Exercise added to routine:', result);
+      
+      if (result) {
+        alert(`Added "${exerciseToAdd.name}" to the routine successfully!`);
+        setShowAddToRoutine(false);
+        setExerciseToAdd(null);
+        setSelectedRoutineId('');
+        setVariationData({
+          name: '',
+          variation_type: 'Standard',
+          sets: 3,
+          reps: 10,
+          weight: '',
+          notes: ''
+        });
+      }
+    } catch (error) {
+      console.error('Error adding exercise to routine:', error);
+      alert('Failed to add exercise to routine');
+    }
+  };
+  
+  // Select an exercise to add to a routine
+  const selectExerciseToAdd = (exercise) => {
+    setExerciseToAdd(exercise);
+    setVariationData({
+      name: `${exercise.name} (Standard)`,
+      variation_type: 'Standard',
+      sets: 3,
+      reps: 10,
+      weight: '',
+      notes: ''
+    });
+    setShowAddToRoutine(true);
+  };
+  
+  // Cancel adding exercise to routine
+  const cancelAddToRoutine = () => {
+    setShowAddToRoutine(false);
+    setExerciseToAdd(null);
+    setSelectedRoutineId('');
   };
   
   // Validate form
@@ -139,11 +263,168 @@ const ExerciseBrowser = () => {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
-          </div>         
+          </div>
           
-          
-     
+          <div className="filter-selects">
+            <select
+              className="filter-select"
+              value={muscleGroupFilter}
+              onChange={(e) => setMuscleGroupFilter(e.target.value)}
+            >
+              <option value="">All Muscle Groups</option>
+              {muscleGroups && muscleGroups.map(group => (
+                <option key={group} value={group}>{group}</option>
+              ))}
+            </select>
+            
+            <select
+              className="filter-select"
+              value={equipmentFilter}
+              onChange={(e) => setEquipmentFilter(e.target.value)}
+            >
+              <option value="">All Equipment</option>
+              {equipment && equipment.map(item => (
+                <option key={item} value={item}>{item}</option>
+              ))}
+            </select>
+            
+            <button 
+              className="btn btn-secondary"
+              onClick={resetFilters}
+            >
+              Reset Filters
+            </button>
+          </div>
         </div>
+        
+        {/* Add Exercise to Routine Modal */}
+        {showAddToRoutine && exerciseToAdd && (
+          <div className="add-to-routine-modal">
+            <div className="modal-header">
+              <h3>Add {exerciseToAdd.name} to Routine</h3>
+              <button 
+                type="button" 
+                className="btn btn-secondary"
+                onClick={cancelAddToRoutine}
+              >
+                Cancel
+              </button>
+            </div>
+            
+            <form onSubmit={handleAddToRoutine}>
+              <div className="form-group">
+                <label htmlFor="routine_id">Select Routine*</label>
+                <select
+                  id="routine_id"
+                  className="form-control"
+                  value={selectedRoutineId}
+                  onChange={(e) => setSelectedRoutineId(e.target.value)}
+                  required
+                >
+                  <option value="">Select a routine</option>
+                  {routines.map(routine => (
+                    <option key={routine.id} value={routine.id}>
+                      {routine.name} {routine.day_of_week ? `(${routine.day_of_week})` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              
+              <div className="form-group">
+                <label htmlFor="variation_type">Variation Type</label>
+                <select
+                  id="variation_type"
+                  name="variation_type"
+                  className="form-control"
+                  value={variationData.variation_type}
+                  onChange={handleVariationChange}
+                >
+                  {variationTypes.map(type => (
+                    <option key={type} value={type}>{type}</option>
+                  ))}
+                </select>
+              </div>
+              
+              <div className="form-group">
+                <label htmlFor="name">Variation Name</label>
+                <input
+                  type="text"
+                  id="name"
+                  name="name"
+                  className="form-control"
+                  value={variationData.name}
+                  onChange={handleVariationChange}
+                />
+              </div>
+              
+              <div className="form-row">
+                <div className="form-group">
+                  <label htmlFor="sets">Sets*</label>
+                  <input
+                    type="number"
+                    id="sets"
+                    name="sets"
+                    className="form-control"
+                    value={variationData.sets}
+                    onChange={handleVariationChange}
+                    min="1"
+                    required
+                  />
+                </div>
+                
+                <div className="form-group">
+                  <label htmlFor="reps">Reps*</label>
+                  <input
+                    type="number"
+                    id="reps"
+                    name="reps"
+                    className="form-control"
+                    value={variationData.reps}
+                    onChange={handleVariationChange}
+                    min="1"
+                    required
+                  />
+                </div>
+                
+                <div className="form-group">
+                  <label htmlFor="weight">Weight (lbs)</label>
+                  <input
+                    type="number"
+                    id="weight"
+                    name="weight"
+                    className="form-control"
+                    value={variationData.weight}
+                    onChange={handleVariationChange}
+                    min="0"
+                    step="0.5"
+                  />
+                </div>
+              </div>
+              
+              <div className="form-group">
+                <label htmlFor="notes">Notes</label>
+                <textarea
+                  id="notes"
+                  name="notes"
+                  className="form-control"
+                  value={variationData.notes}
+                  onChange={handleVariationChange}
+                  rows="2"
+                ></textarea>
+              </div>
+              
+              <div className="form-actions">
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={isLoading.form}
+                >
+                  {isLoading.form ? 'Adding...' : 'Add to Routine'}
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
         
         {/* Create Exercise Form */}
         <div className="exercise-form-container">
@@ -164,6 +445,7 @@ const ExerciseBrowser = () => {
                 value={formData.name}
                 onChange={handleChange}
                 disabled={isLoading.form}
+                required
               />
               {validationErrors.name && <div className="error-message">{validationErrors.name}</div>}
             </div>
@@ -229,7 +511,7 @@ const ExerciseBrowser = () => {
         </div>
         
         <div className="exercise-results">
-          {isLoading.userData ? (
+          {isLoading.initial ? (
             <div className="loading">Loading exercises...</div>
           ) : filteredExercises.length === 0 ? (
             <div className="no-exercises">
@@ -264,6 +546,16 @@ const ExerciseBrowser = () => {
                       </p>
                     </div>
                   )}
+                  
+                  <div className="exercise-actions">
+                    <button
+                      type="button"
+                      className="btn btn-primary"
+                      onClick={() => selectExerciseToAdd(exercise)}
+                    >
+                      Add to Routine
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>

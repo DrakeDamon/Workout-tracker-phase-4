@@ -28,7 +28,9 @@ const fetchWithErrorHandling = async (url, options = {}) => {
 
     const contentType = response.headers.get('content-type');
     if (contentType && contentType.includes('application/json') && response.status !== 204) {
-      return await response.json();
+      const data = await response.json();
+      console.log('Response Data:', data);
+      return data;
     }
     
     return {};
@@ -97,29 +99,33 @@ const api = {
 
   // Routine Exercise endpoints (showing the many-through relationship)
   getRoutineExercises: async (routineId) => {
+    console.log(`Fetching exercises for routine ${routineId}`);
     return fetchWithErrorHandling(`${API_BASE_URL}/api/routines/${routineId}/exercises`);
   },
 
-  getRoutineExercise: async (routineId, exerciseId) => {
-    return fetchWithErrorHandling(`${API_BASE_URL}/api/routines/${routineId}/exercises/${exerciseId}`);
+  getRoutineExercise: async (routineId, variationId) => {
+    return fetchWithErrorHandling(`${API_BASE_URL}/api/routines/${routineId}/exercises/${variationId}`);
   },
 
   addExerciseToRoutine: async (routineId, exerciseData) => {
+    console.log(`Adding exercise to routine ${routineId}:`, exerciseData);
     return fetchWithErrorHandling(`${API_BASE_URL}/api/routines/${routineId}/exercises`, {
       method: 'POST',
       body: JSON.stringify(exerciseData),
     });
   },
 
-  updateRoutineExercise: async (routineId, exerciseId, data) => {
-    return fetchWithErrorHandling(`${API_BASE_URL}/api/routines/${routineId}/exercises/${exerciseId}`, {
+  updateRoutineExercise: async (routineId, variationId, data) => {
+    console.log(`Updating exercise variation ${variationId} in routine ${routineId}:`, data);
+    return fetchWithErrorHandling(`${API_BASE_URL}/api/routines/${routineId}/exercises/${variationId}`, {
       method: 'PUT',
       body: JSON.stringify(data),
     });
   },
 
-  removeExerciseFromRoutine: async (routineId, exerciseId) => {
-    return fetchWithErrorHandling(`${API_BASE_URL}/api/routines/${routineId}/exercises/${exerciseId}`, {
+  removeExerciseFromRoutine: async (routineId, variationId) => {
+    console.log(`Removing exercise variation ${variationId} from routine ${routineId}`);
+    return fetchWithErrorHandling(`${API_BASE_URL}/api/routines/${routineId}/exercises/${variationId}`, {
       method: 'DELETE',
     });
   }
