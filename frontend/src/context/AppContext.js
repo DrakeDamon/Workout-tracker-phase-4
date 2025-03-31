@@ -23,6 +23,18 @@ function AppProvider({ children }) {
   const [currentRoutine, setCurrentRoutine] = useState(null);
   const [dataLoaded, setDataLoaded] = useState(false);
   
+  // New state for variation types
+  const [variationTypes, setVariationTypes] = useState([
+    { id: 1, name: 'Standard', description: 'The basic way to perform the exercise', isDefault: true },
+    { id: 2, name: 'Width Variation', description: 'Altering grip or stance width to target different muscles', isDefault: true },
+    { id: 3, name: 'Angle Variation', description: 'Changing the angle of the movement (incline, decline, etc.)', isDefault: true },
+    { id: 4, name: 'Grip Variation', description: 'Different grip styles (overhand, underhand, neutral)', isDefault: true },
+    { id: 5, name: 'Tempo Variation', description: 'Changing the speed or adding pauses to the movement', isDefault: true },
+    { id: 6, name: 'Power', description: 'Explosive movement variations focusing on power', isDefault: true },
+    { id: 7, name: 'Endurance', description: 'Higher repetition versions focusing on muscular endurance', isDefault: true },
+    { id: 8, name: 'Other', description: 'Custom variation types', isDefault: true }
+  ]);
+  
   // Loading states
   const [isLoading, setIsLoading] = useState({
     initial: true,
@@ -51,6 +63,18 @@ function AppProvider({ children }) {
       const exercisesData = await api.getExercises();
       console.log('Received exercises data:', exercisesData);
       setExercises(exercisesData);
+      
+      // Fetch variation types
+      try {
+        const variationTypesData = await api.getVariationTypes();
+        if (variationTypesData && Array.isArray(variationTypesData)) {
+          console.log('Received variation types data:', variationTypesData);
+          setVariationTypes(variationTypesData);
+        }
+      } catch (typeError) {
+        console.error('Error loading variation types:', typeError);
+        // Continue with default types if the API fails
+      }
       
       // Extract unique muscle groups and equipment
       const uniqueMuscleGroups = [...new Set(exercisesData.map(exercise => exercise.muscle_group).filter(Boolean))];
@@ -291,6 +315,25 @@ function AppProvider({ children }) {
         });
       }
       
+      // Check if the variation_type is new and should be added to our types
+      if (exerciseData.variation_type) {
+        const typeExists = variationTypes.some(
+          type => type.name.toLowerCase() === exerciseData.variation_type.toLowerCase()
+        );
+        
+        if (!typeExists) {
+          // Add the new variation type
+          const newType = {
+            id: variationTypes.length + 1,
+            name: exerciseData.variation_type,
+            description: '',
+            isDefault: false
+          };
+          
+          setVariationTypes(prev => [...prev, newType]);
+        }
+      }
+      
       // Clear errors
       setErrors(prev => ({ ...prev, form: null }));
       
@@ -358,6 +401,25 @@ function AppProvider({ children }) {
           
           return updated;
         });
+      }
+      
+      // Check if the variation_type is new and should be added to our types
+      if (data.variation_type) {
+        const typeExists = variationTypes.some(
+          type => type.name.toLowerCase() === data.variation_type.toLowerCase()
+        );
+        
+        if (!typeExists) {
+          // Add the new variation type
+          const newType = {
+            id: variationTypes.length + 1,
+            name: data.variation_type,
+            description: '',
+            isDefault: false
+          };
+          
+          setVariationTypes(prev => [...prev, newType]);
+        }
       }
       
       // Clear errors
@@ -442,6 +504,40 @@ function AppProvider({ children }) {
     }
   };
 
+  // Create a new variation type
+ // Updated createVariationType function for AppContext.js
+const createVariationType = async (typeName, description = '') => {
+  console.log(`Creating new variation type: ${typeName}`);
+  setIsLoading(prev => ({ ...prev, form: true }));
+  
+  try {
+    // Prepare data for API call
+    const typeData = {
+      name: typeName,
+      description: description || ''
+    };
+    
+    // Call API to create the variation type
+    const result = await api.createVariationType(typeData);
+    console.log('New variation type created:', result);
+    
+    // Reload all variation types from the backend to ensure we have the latest data
+    const updatedVariationTypes = await api.getVariationTypes();
+    setVariationTypes(updatedVariationTypes);
+    
+    // Clear errors
+    setErrors(prev => ({ ...prev, form: null }));
+    
+    return result;
+  } catch (err) {
+    console.error('Error creating variation type:', err);
+    setErrors(prev => ({ ...prev, form: err.message || 'Failed to create variation type' }));
+    return null;
+  } finally {
+    setIsLoading(prev => ({ ...prev, form: false }));
+  }
+};
+
   // Build the context value object
   const contextValue = {
     // Application data state
@@ -451,6 +547,7 @@ function AppProvider({ children }) {
     equipment,
     currentRoutine,
     dataLoaded,
+    variationTypes, // Added variation types
     
     // Loading and error states
     isLoading,
@@ -465,10 +562,13 @@ function AppProvider({ children }) {
     // Exercise functions
     createExercise,
     
-    // Routine Exercise functions
+    // Routine Exercise/Variation functions
     addExerciseToRoutine,
     updateRoutineExercise,
-    removeExerciseFromRoutine
+    removeExerciseFromRoutine,
+    
+    // Variation type functions
+    createVariationType
   };
 
   return (

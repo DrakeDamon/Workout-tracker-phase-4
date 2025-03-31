@@ -38,24 +38,13 @@ const daysOfWeek = [
   'Friday', 'Saturday', 'Sunday'
 ];
 
-// Variation types
-const variationTypes = [
-  'Standard',
-  'Width Variation',
-  'Angle Variation',
-  'Grip Variation',
-  'Tempo Variation',
-  'Power',
-  'Endurance',
-  'Other'
-];
-
 const CreateRoutine = () => {
   const navigate = useNavigate();
   const { 
     createRoutine, 
     addExerciseToRoutine, 
-    exercises, 
+    exercises,
+    variationTypes, // Get variation types from context
     isLoading,
     errors
   } = useAppContext();
@@ -246,8 +235,9 @@ const CreateRoutine = () => {
                               }}
                             >
                               <option value="">Select a variation</option>
+                              {/* Use variation types from context */}
                               {variationTypes.map(type => (
-                                <option key={type} value={type}>{type}</option>
+                                <option key={type.id} value={type.name}>{type.name}</option>
                               ))}
                             </Field>
                             <ErrorMessage 

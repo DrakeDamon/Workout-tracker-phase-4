@@ -61,7 +61,11 @@ def home():
             "POST /api/routines/:routine_id/variations": "Add a variation to a routine",
             "GET /api/routines/:routine_id/variations/:variation_id": "Get a specific variation",
             "PUT /api/routines/:routine_id/variations/:variation_id": "Update a variation",
-            "DELETE /api/routines/:routine_id/variations/:variation_id": "Delete a variation"
+            "DELETE /api/routines/:routine_id/variations/:variation_id": "Delete a variation",
+            
+            # Variation Types
+            "GET /api/variation-types": "Get all unique variation types",
+            "POST /api/variation-types": "Create a new variation type"
         }
     })
 
@@ -319,6 +323,14 @@ class VariationResource(Resource):
                 variation.name = data['name']
             if 'variation_type' in data:
                 variation.variation_type = data['variation_type']
+            if 'sets' in data:
+                variation.sets = data['sets']
+            if 'reps' in data:
+                variation.reps = data['reps']
+            if 'weight' in data:
+                variation.weight = data['weight']
+            if 'notes' in data:
+                variation.notes = data['notes']
             
             db.session.commit()
             
@@ -351,6 +363,81 @@ class VariationResource(Resource):
             db.session.rollback()
             return {"error": "An error occurred while deleting the variation"}, 500
 
+# VariationTypes Resource - gets unique variation types from existing variations
+class VariationTypesResource(Resource):
+    def get(self):
+        """Get all unique variation types"""
+        # Query distinct variation types from the Variation table
+        variation_types = db.session.query(Variation.variation_type).distinct().all()
+        
+        # Convert to a list of strings and filter out None values
+        types = [t[0] for t in variation_types if t[0]]
+        
+        # Define default types to ensure these always exist
+        default_types = [
+            'Standard',
+            'Width Variation',
+            'Angle Variation',
+            'Grip Variation',
+            'Tempo Variation',
+            'Power',
+            'Endurance',
+            'Other'
+        ]
+        
+        # Add any default types that are not already in the list
+        for default_type in default_types:
+            if default_type not in types:
+                types.append(default_type)
+        
+        # Return as a list of objects for consistency with other endpoints
+        result = [{"id": i+1, "name": t, "description": "", "is_default": t in default_types} for i, t in enumerate(sorted(types))]
+        return result, 200
+
+    def post(self):
+        """Create a new variation type by adding a reference to it in the database"""
+        data = request.get_json()
+        
+        # Validate required fields
+        if not data.get('name'):
+            return {"error": "Variation type name is required"}, 400
+            
+        # Check if variation type already exists
+        variation_types = db.session.query(Variation.variation_type).distinct().all()
+        existing_types = [t[0] for t in variation_types if t[0]]
+        
+        if data['name'] in existing_types:
+            return {"error": f"Variation type '{data['name']}' already exists"}, 400
+            
+        # Find a routine and exercise to use for the reference variation
+        routine = Routine.query.first()
+        exercise = Exercise.query.first()
+        
+        if not routine or not exercise:
+            return {"error": "Cannot create variation type: no routines or exercises exist"}, 400
+            
+        # Create a variation with the new type to ensure it exists in the database
+        reference_variation = Variation(
+            exercise_id=exercise.id,
+            routine_id=routine.id,
+            name=f"Reference for type: {data['name']}",
+            variation_type=data['name']
+        )
+        
+        try:
+            db.session.add(reference_variation)
+            db.session.commit()
+            
+            return {
+                "id": len(existing_types) + 1,
+                "name": data['name'],
+                "description": data.get('description', ''),
+                "is_default": False
+            }, 201
+        except Exception as e:
+            db.session.rollback()
+            return {"error": f"Failed to create variation type: {str(e)}"}, 500
+
 # Register API routes
 api.add_resource(RoutineListResource, '/api/routines')
 api.add_resource(RoutineResource, '/api/routines/<int:routine_id>')
@@ -358,6 +445,7 @@ api.add_resource(ExerciseListResource, '/api/exercises')
 api.add_resource(ExerciseResource, '/api/exercises/<int:exercise_id>')
 api.add_resource(VariationListResource, '/api/routines/<int:routine_id>/variations')
 api.add_resource(VariationResource, '/api/routines/<int:routine_id>/variations/<int:variation_id>')
+api.add_resource(VariationTypesResource, '/api/variation-types')
 
 # For running the app directly
 if __name__ == '__main__':

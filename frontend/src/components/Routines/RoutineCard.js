@@ -12,14 +12,8 @@ const RoutineCard = ({ routine }) => {
   // Check if this specific routine is being deleted
   const isDeletingThisRoutine = isLoading.deletion === routine.id;
   
-  // Count exercises - handle the different possible ways exercises might be available
-  const exerciseCount = routine.exercises 
-    ? routine.exercises.length 
-    : routine.routine_exercises 
-      ? routine.routine_exercises.length
-      : routine.variations
-        ? routine.variations.length
-        : 0;
+  // Count exercises - simplify to just use variations
+  const exerciseCount = routine.variations ? routine.variations.length : 0;
   
   const handleDelete = async () => {
     if (window.confirm(`Are you sure you want to delete "${routine.name}"?`)) {

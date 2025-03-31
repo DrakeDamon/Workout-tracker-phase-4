@@ -97,6 +97,18 @@ const api = {
     });
   },
 
+  // Variation Types endpoints
+  getVariationTypes: async () => {
+    return fetchWithErrorHandling(`${API_BASE_URL}/api/variation-types`);
+  },
+
+  createVariationType: async (typeData) => {
+    return fetchWithErrorHandling(`${API_BASE_URL}/api/variation-types`, {
+      method: 'POST',
+      body: JSON.stringify(typeData),
+    });
+  },
+
   // Routine Exercise endpoints (showing the many-through relationship)
   getRoutineExercises: async (routineId) => {
     console.log(`Fetching exercises for routine ${routineId}`);
@@ -109,7 +121,7 @@ const api = {
 
   addExerciseToRoutine: async (routineId, exerciseData) => {
     console.log(`Adding exercise to routine ${routineId}:`, exerciseData);
-    return fetchWithErrorHandling(`${API_BASE_URL}/api/routines/${routineId}/exercises`, {
+    return fetchWithErrorHandling(`${API_BASE_URL}/api/routines/${routineId}/variations`, {
       method: 'POST',
       body: JSON.stringify(exerciseData),
     });
@@ -117,7 +129,7 @@ const api = {
 
   updateRoutineExercise: async (routineId, variationId, data) => {
     console.log(`Updating exercise variation ${variationId} in routine ${routineId}:`, data);
-    return fetchWithErrorHandling(`${API_BASE_URL}/api/routines/${routineId}/exercises/${variationId}`, {
+    return fetchWithErrorHandling(`${API_BASE_URL}/api/routines/${routineId}/variations/${variationId}`, {
       method: 'PUT',
       body: JSON.stringify(data),
     });
@@ -125,7 +137,7 @@ const api = {
 
   removeExerciseFromRoutine: async (routineId, variationId) => {
     console.log(`Removing exercise variation ${variationId} from routine ${routineId}`);
-    return fetchWithErrorHandling(`${API_BASE_URL}/api/routines/${routineId}/exercises/${variationId}`, {
+    return fetchWithErrorHandling(`${API_BASE_URL}/api/routines/${routineId}/variations/${variationId}`, {
       method: 'DELETE',
     });
   }
