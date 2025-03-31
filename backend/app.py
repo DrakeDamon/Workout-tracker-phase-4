@@ -3,7 +3,7 @@ from flask_restful import Api, Resource, reqparse
 from flask_cors import CORS
 from flask_migrate import Migrate
 from config import Config
-from models import db, Exercise, Routine, ExerciseVariation, VariationType
+from models import db, Exercise, Routine, Variation
 
 # Create Flask app
 app = Flask(__name__)
@@ -44,22 +44,24 @@ def home():
     return jsonify({
         "message": "Welcome to the Workout Tracker API",
         "endpoints": {
+            # Routine endpoints
             "GET /api/routines": "Get all routines",
             "GET /api/routines/:id": "Get a specific routine",
             "POST /api/routines": "Create a new routine",
             "PUT /api/routines/:id": "Update a routine",
             "DELETE /api/routines/:id": "Delete a routine",
+            
+            # Exercise endpoints
             "GET /api/exercises": "Get all exercises",
             "GET /api/exercises/:id": "Get a specific exercise",
             "POST /api/exercises": "Create a new exercise",
-            "GET /api/routines/:routine_id/exercises": "Get exercises for a specific routine",
-            "POST /api/routines/:routine_id/exercises": "Add an exercise to a routine",
-            "GET /api/routines/:routine_id/exercises/:exercise_id": "Get a specific exercise in a routine",
-            "PUT /api/routines/:routine_id/exercises/:exercise_id": "Update an exercise in a routine",
-            "DELETE /api/routines/:routine_id/exercises/:exercise_id": "Remove an exercise from a routine",
-            "GET /api/variations": "Get all variation types",
-            "POST /api/variations": "Create a new variation type",
-            "DELETE /api/variations/:id": "Delete a variation type",
+            
+            # Variation endpoints (join table between routines and exercises)
+            "GET /api/routines/:routine_id/variations": "Get all variations for a routine",
+            "POST /api/routines/:routine_id/variations": "Add a variation to a routine",
+            "GET /api/routines/:routine_id/variations/:variation_id": "Get a specific variation",
+            "PUT /api/routines/:routine_id/variations/:variation_id": "Update a variation",
+            "DELETE /api/routines/:routine_id/variations/:variation_id": "Delete a variation"
         }
     })
 
@@ -99,12 +101,29 @@ class RoutineListResource(Resource):
 
 class RoutineResource(Resource):
     def get(self, routine_id):
-        """Get a specific routine"""
+        """Get a specific routine with all its variations"""
         routine = Routine.query.get(routine_id)
         if not routine:
             return {"error": "Routine not found"}, 404
         
-        return routine.to_dict(), 200
+        # Get the routine with its variations and related exercises
+        routine_dict = routine.to_dict()
+        
+        # Get all variations for this routine
+        variations = Variation.query.filter_by(routine_id=routine_id).all()
+        variations_with_exercises = []
+        
+        for variation in variations:
+            var_dict = variation.to_dict()
+            # Get the associated exercise
+            exercise = Exercise.query.get(variation.exercise_id)
+            if exercise:
+                var_dict['exercise'] = exercise.to_dict()
+            variations_with_exercises.append(var_dict)
+        
+        routine_dict['variations'] = variations_with_exercises
+        
+        return routine_dict, 200
 
     def put(self, routine_id):
         """Update a specific routine"""
@@ -206,16 +225,16 @@ class ExerciseResource(Resource):
         
         return exercise.to_dict(), 200
 
-# Routine Exercise Resources (representing the Many-Through relationship)
-class RoutineExerciseListResource(Resource):
+# Variation Resources (join table between routines and exercises)
+class VariationListResource(Resource):
     def get(self, routine_id):
-        """Get all exercises for a specific routine"""
+        """Get all variations for a specific routine"""
         routine = Routine.query.get(routine_id)
         if not routine:
             return {"error": "Routine not found"}, 404
         
-        # Get all exercise variations for this routine
-        variations = ExerciseVariation.query.filter_by(routine_id=routine_id).all()
+        # Get all variations for this routine
+        variations = Variation.query.filter_by(routine_id=routine_id).all()
         
         # Include the exercise details with each variation
         result = []
@@ -229,7 +248,7 @@ class RoutineExerciseListResource(Resource):
         return result, 200
 
     def post(self, routine_id):
-        """Add an exercise to a routine (with variation)"""
+        """Add a variation to a routine"""
         routine = Routine.query.get(routine_id)
         if not routine:
             return {"error": "Routine not found"}, 404
@@ -245,34 +264,14 @@ class RoutineExerciseListResource(Resource):
         if not exercise:
             return {"error": "Exercise not found"}, 404
         
-        # Check if this exercise is already in the routine
-        existing = ExerciseVariation.query.filter_by(
-            routine_id=routine_id, 
-            exercise_id=data['exercise_id']
-        ).first()
-        
-        if existing:
-            return {"error": "This exercise is already in the routine"}, 400
-        
         try:
-            # Create variation for this exercise in this routine
-            variation = ExerciseVariation(
+            # Create variation
+            variation = Variation(
                 exercise_id=data['exercise_id'],
-                name=data.get('name', f"{exercise.name} Variation"),
-                description=data.get('description'),
-                variation_type=data.get('variation_type', 'Standard'),
                 routine_id=routine_id,
-                sets=data.get('sets', 3),
-                reps=data.get('reps', 10),
-                weight=data.get('weight'),
-                notes=data.get('notes'),
-                order=data.get('order')
+                name=data.get('name', f"{exercise.name} Variation"),
+                variation_type=data.get('variation_type', 'Standard')
             )
-            
-            # If no order specified, put at the end
-            if not variation.order:
-                max_order = db.session.query(db.func.max(ExerciseVariation.order)).filter_by(routine_id=routine_id).scalar()
-                variation.order = (max_order or 0) + 1
             
             db.session.add(variation)
             db.session.commit()
@@ -286,22 +285,18 @@ class RoutineExerciseListResource(Resource):
             return {"error": str(e)}, 400
         except Exception as e:
             db.session.rollback()
-            return {"error": "An error occurred while adding the exercise to the routine"}, 500
+            return {"error": "An error occurred while adding the variation"}, 500
 
-class RoutineExerciseResource(Resource):
-    def get(self, routine_id, exercise_id):
-        """Get a specific exercise in a routine"""
-        # Find the variation that connects this exercise to this routine
-        variation = ExerciseVariation.query.filter_by(
-            routine_id=routine_id, 
-            exercise_id=exercise_id
-        ).first()
+class VariationResource(Resource):
+    def get(self, routine_id, variation_id):
+        """Get a specific variation"""
+        variation = Variation.query.get(variation_id)
         
-        if not variation:
-            return {"error": "Exercise not found in this routine"}, 404
+        if not variation or variation.routine_id != routine_id:
+            return {"error": "Variation not found in this routine"}, 404
         
         # Get the exercise details
-        exercise = Exercise.query.get(exercise_id)
+        exercise = Exercise.query.get(variation.exercise_id)
         
         # Return the variation with the exercise details
         result = variation.to_dict()
@@ -309,16 +304,12 @@ class RoutineExerciseResource(Resource):
         
         return result, 200
 
-    def put(self, routine_id, exercise_id):
-        """Update an exercise in a routine"""
-        # Find the variation that connects this exercise to this routine
-        variation = ExerciseVariation.query.filter_by(
-            routine_id=routine_id, 
-            exercise_id=exercise_id
-        ).first()
+    def put(self, routine_id, variation_id):
+        """Update a variation"""
+        variation = Variation.query.get(variation_id)
         
-        if not variation:
-            return {"error": "Exercise not found in this routine"}, 404
+        if not variation or variation.routine_id != routine_id:
+            return {"error": "Variation not found in this routine"}, 404
         
         data = request.get_json()
         
@@ -326,25 +317,13 @@ class RoutineExerciseResource(Resource):
             # Update variation details
             if 'name' in data:
                 variation.name = data['name']
-            if 'description' in data:
-                variation.description = data['description']
             if 'variation_type' in data:
                 variation.variation_type = data['variation_type']
-            if 'sets' in data:
-                variation.sets = data['sets']
-            if 'reps' in data:
-                variation.reps = data['reps']
-            if 'weight' in data:
-                variation.weight = data['weight']
-            if 'notes' in data:
-                variation.notes = data['notes']
-            if 'order' in data:
-                variation.order = data['order']
             
             db.session.commit()
             
             # Get the exercise details
-            exercise = Exercise.query.get(exercise_id)
+            exercise = Exercise.query.get(variation.exercise_id)
             
             # Return the updated variation with exercise details
             result = variation.to_dict()
@@ -355,100 +334,30 @@ class RoutineExerciseResource(Resource):
             return {"error": str(e)}, 400
         except Exception as e:
             db.session.rollback()
-            return {"error": "An error occurred while updating the exercise"}, 500
+            return {"error": "An error occurred while updating the variation"}, 500
 
-    def delete(self, routine_id, exercise_id):
-        """Remove an exercise from a routine"""
-        # Find the variation that connects this exercise to this routine
-        variation = ExerciseVariation.query.filter_by(
-            routine_id=routine_id, 
-            exercise_id=exercise_id
-        ).first()
+    def delete(self, routine_id, variation_id):
+        """Delete a variation"""
+        variation = Variation.query.get(variation_id)
         
-        if not variation:
-            return {"error": "Exercise not found in this routine"}, 404
+        if not variation or variation.routine_id != routine_id:
+            return {"error": "Variation not found in this routine"}, 404
         
         try:
             db.session.delete(variation)
             db.session.commit()
-            return {"message": "Exercise removed from routine successfully"}, 200
+            return {"message": "Variation deleted successfully"}, 200
         except Exception as e:
             db.session.rollback()
-            return {"error": "An error occurred while removing the exercise from the routine"}, 500
-
-# Variation Type Resources
-class VariationTypeListResource(Resource):
-    def get(self):
-        """Get all variation types"""
-        variation_types = VariationType.query.all()
-        return [vt.to_dict() for vt in variation_types], 200
-
-    def post(self):
-        """Create a new variation type"""
-        data = request.get_json()
-        
-        # Validate required fields
-        if not data.get('name'):
-            return {"error": "Variation type name is required"}, 400
-        
-        # Check if a variation type with this name already exists
-        existing = VariationType.query.filter(VariationType.name.ilike(data['name'])).first()
-        if existing:
-            return {"error": "A variation type with this name already exists"}, 400
-        
-        try:
-            variation_type = VariationType(
-                name=data['name'],
-                description=data.get('description'),
-                is_default=data.get('is_default', False)
-            )
-            
-            db.session.add(variation_type)
-            db.session.commit()
-            
-            return variation_type.to_dict(), 201
-        except ValueError as e:
-            return {"error": str(e)}, 400
-        except Exception as e:
-            db.session.rollback()
-            return {"error": "An error occurred while creating the variation type"}, 500
-
-class VariationTypeResource(Resource):
-    def get(self, variation_type_id):
-        """Get a specific variation type"""
-        variation_type = VariationType.query.get(variation_type_id)
-        if not variation_type:
-            return {"error": "Variation type not found"}, 404
-        
-        return variation_type.to_dict(), 200
-        
-    def delete(self, variation_type_id):
-        """Delete a variation type"""
-        variation_type = VariationType.query.get(variation_type_id)
-        if not variation_type:
-            return {"error": "Variation type not found"}, 404
-        
-        # Don't allow deletion of default variation types
-        if variation_type.is_default:
-            return {"error": "Cannot delete a default variation type"}, 400
-        
-        try:
-            db.session.delete(variation_type)
-            db.session.commit()
-            return {"message": "Variation type deleted successfully"}, 200
-        except Exception as e:
-            db.session.rollback()
-            return {"error": "An error occurred while deleting the variation type"}, 500
+            return {"error": "An error occurred while deleting the variation"}, 500
 
 # Register API routes
 api.add_resource(RoutineListResource, '/api/routines')
 api.add_resource(RoutineResource, '/api/routines/<int:routine_id>')
 api.add_resource(ExerciseListResource, '/api/exercises')
 api.add_resource(ExerciseResource, '/api/exercises/<int:exercise_id>')
-api.add_resource(RoutineExerciseListResource, '/api/routines/<int:routine_id>/exercises')
-api.add_resource(RoutineExerciseResource, '/api/routines/<int:routine_id>/exercises/<int:exercise_id>')
-api.add_resource(VariationTypeListResource, '/api/variations')
-api.add_resource(VariationTypeResource, '/api/variations/<int:variation_type_id>')
+api.add_resource(VariationListResource, '/api/routines/<int:routine_id>/variations')
+api.add_resource(VariationResource, '/api/routines/<int:routine_id>/variations/<int:variation_id>')
 
 # For running the app directly
 if __name__ == '__main__':

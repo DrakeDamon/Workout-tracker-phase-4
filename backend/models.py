@@ -23,13 +23,10 @@ class Exercise(db.Model, SerializerMixin):
     muscle_group = db.Column(db.String(50))
     equipment = db.Column(db.String(100))
     
-    # Add this relationship
-    variations = db.relationship('ExerciseVariation', back_populates='exercise', cascade="all, delete-orphan")
+    # Relationship with variations
+    variations = db.relationship('Variation', back_populates='exercise', cascade="all, delete-orphan")
     
-    # Update serialization rules
-
-    
-    # Association proxy to get routines through routine_exercises
+    # Association proxy to get routines through variations
     routines = association_proxy('variations', 'routine')
     
     # Serialization rules
@@ -57,8 +54,8 @@ class Routine(db.Model, SerializerMixin):
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = db.Column(db.DateTime, onupdate=lambda: datetime.now(timezone.utc))
     
-    # Define relationship - one side of one-to-many with RoutineExercise
-    variations = db.relationship('ExerciseVariation', back_populates='routine', cascade="all, delete-orphan")
+    # Relationship with variations
+    variations = db.relationship('Variation', back_populates='routine', cascade="all, delete-orphan")
     
     # Association proxy to get exercises through variations
     exercises = association_proxy('variations', 'exercise')
@@ -78,24 +75,16 @@ class Routine(db.Model, SerializerMixin):
     def __repr__(self):
         return f"<Routine {self.name}>"
 
-
-
-class ExerciseVariation(db.Model, SerializerMixin):
-    __tablename__ = 'exercise_variations'
+class Variation(db.Model, SerializerMixin):
+    __tablename__ = 'variations'
     
     id = db.Column(db.Integer, primary_key=True)
     exercise_id = db.Column(db.Integer, db.ForeignKey('exercises.id'), nullable=False)
-    name = db.Column(db.String(100), nullable=False)
-    description = db.Column(db.Text)
-    variation_type = db.Column(db.String(50))  # e.g., "explosive", "static", "calisthenics"
+    routine_id = db.Column(db.Integer, db.ForeignKey('routines.id'), nullable=False)
     
-    # Routine-specific implementation details
-    routine_id = db.Column(db.Integer, db.ForeignKey('routines.id'))
-    sets = db.Column(db.Integer, default=3)
-    reps = db.Column(db.Integer, default=10)
-    weight = db.Column(db.Float)
-    notes = db.Column(db.Text)
-    order = db.Column(db.Integer)
+    # Variation details - just name and variation_type (no sets, reps, etc.)
+    name = db.Column(db.String(100), nullable=False)
+    variation_type = db.Column(db.String(50), default='Standard')
     
     # Relationships
     exercise = db.relationship('Exercise', back_populates='variations')
@@ -113,19 +102,5 @@ class ExerciseVariation(db.Model, SerializerMixin):
             raise ValueError("Variation name must be less than 100 characters")
         return name
     
-    # Validation for sets and reps
-    @validates('sets', 'reps')
-    def validate_counts(self, key, value):
-        if value is not None and value < 1:
-            raise ValueError(f"{key} must be at least 1")
-        return value
-    
-    # Validation for weight
-    @validates('weight')
-    def validate_weight(self, key, value):
-        if value is not None and value < 0:
-            raise ValueError("Weight cannot be negative")
-        return value
-    
     def __repr__(self):
-        return f"<ExerciseVariation {self.name} of {self.exercise_id}>"
+        return f"<Variation {self.name} of {self.exercise_id} in routine {self.routine_id}>"
