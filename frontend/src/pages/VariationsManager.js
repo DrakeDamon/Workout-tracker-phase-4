@@ -125,24 +125,43 @@ const VariationsManager = () => {
     }
   };
   
-  // Filter variations based on filters
+  // Filter variations based on filters - UPDATED
   const filteredVariations = variations.filter(variation => {
     if (!variation) return false; // Extra safety check
     
-    if (searchTerm && !variation.exercise_name.toLowerCase().includes(searchTerm.toLowerCase())) {
-      return false;
+    // Search term should search in exercise name, variation type, and routine name
+    if (searchTerm) {
+      const searchLower = searchTerm.toLowerCase();
+      const matchesExerciseName = variation.exercise_name.toLowerCase().includes(searchLower);
+      const matchesVariationType = variation.variation_type.toLowerCase().includes(searchLower);
+      const matchesRoutineName = variation.routine_name.toLowerCase().includes(searchLower);
+      
+      // If search term doesn't match any of these fields, filter out this variation
+      if (!matchesExerciseName && !matchesVariationType && !matchesRoutineName) {
+        return false;
+      }
     }
     
+    // Filter by muscle group
     if (muscleGroupFilter && variation.exercise_muscle_group !== muscleGroupFilter) {
       return false;
     }
     
-    if (typeFilter && variation.variation_type !== typeFilter) {
+    // Filter by variation type - exact match with case-insensitive comparison
+    if (typeFilter && variation.variation_type.toLowerCase() !== typeFilter.toLowerCase()) {
       return false;
     }
     
     return true;
   });
+  
+  // Debug function to check filters
+  useEffect(() => {
+    if (searchTerm || muscleGroupFilter || typeFilter) {
+      console.log('Filters applied:', { searchTerm, muscleGroupFilter, typeFilter });
+      console.log('Filtered variations count:', filteredVariations.length);
+    }
+  }, [searchTerm, muscleGroupFilter, typeFilter, filteredVariations.length]);
   
   // Reset filters
   const resetFilters = () => {
@@ -494,7 +513,7 @@ const VariationsManager = () => {
               <input
                 type="text"
                 className="search-input"
-                placeholder="Search variations..."
+                placeholder="Search exercise name, variation type, or routine..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
