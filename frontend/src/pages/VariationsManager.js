@@ -48,34 +48,40 @@ const VariationsManager = () => {
   // Process variations from routines
   useEffect(() => {
     if (!routines || !exercises) return;
-    
+  
     try {
       setLoading(true);
       const allVariations = [];
-      
+  
       routines.forEach(routine => {
-        const routineVariations = routine.variations || [];
-        
-        // Filter out null/undefined variations and ensure they have an id
-        const mappedVariations = routineVariations
-          .filter(variation => variation && typeof variation === 'object' && variation.id)
-          .map(variation => {
-            const exercise = exercises.find(ex => ex.id === variation.exercise_id);
-            
-            return {
-              ...variation,
-              variation_type: variation.variation_type || 'Standard', // Ensure variation_type has a default
-              routine_name: routine.name,
-              routine_day: routine.day_of_week,
-              exercise_name: exercise ? exercise.name : 'Unknown Exercise',
-              exercise_muscle_group: exercise ? exercise.muscle_group : '',
-              exercise_equipment: exercise ? exercise.equipment : ''
-            };
-          });
-        
+        // Ensure variations is an array, default to empty if not
+        const routineVariations = Array.isArray(routine.variations) ? routine.variations : [];
+  
+        // Filter out null or invalid variations
+        const validVariations = routineVariations.filter(variation =>
+          variation && typeof variation === 'object' && variation.id && variation.exercise_id
+        );
+  
+        const mappedVariations = validVariations.map(variation => {
+          const exercise = exercises.find(ex => ex.id === variation.exercise_id);
+  
+          return {
+            ...variation,
+            variation_type: variation.variation_type || 'Standard', // Default if missing
+            routine_name: routine.name,
+            routine_day: routine.day_of_week,
+            exercise_name: exercise ? exercise.name : 'Unknown Exercise',
+            exercise_muscle_group: exercise ? exercise.muscle_group : '',
+            exercise_equipment: exercise ? exercise.equipment : ''
+          };
+        });
+  
         allVariations.push(...mappedVariations);
       });
-      
+  
+      // Optional: Log to verify data
+      console.log('Processed variations:', allVariations);
+  
       setVariations(allVariations);
     } catch (err) {
       console.error('Error processing variations:', err);

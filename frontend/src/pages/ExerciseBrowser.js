@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
 import Navbar from '../components/Layout/Navbar';
 import '../styles/ExerciseBrowser.css';
@@ -18,6 +18,7 @@ const ExerciseBrowser = () => {
   
   const navigate = useNavigate();
   
+  // **State Declarations**
   // Filter state
   const [searchTerm, setSearchTerm] = useState('');
   const [muscleGroupFilter, setMuscleGroupFilter] = useState('');
@@ -46,9 +47,11 @@ const ExerciseBrowser = () => {
   
   const [validationErrors, setValidationErrors] = useState({});
   
-  // Filtered exercises
+  // Filtered exercises and variations
   const [filteredExercises, setFilteredExercises] = useState([]);
+  const [exerciseVariations, setExerciseVariations] = useState({});
   
+  // **Constants**
   // Variation types
   const variationTypes = [
     'Standard',
@@ -81,27 +84,25 @@ const ExerciseBrowser = () => {
     'None'
   ];
   
-  // Effect to filter exercises when filters or exercises change
+  // **Effects**
+  // Effect to filter exercises
   useEffect(() => {
     if (!exercises || !Array.isArray(exercises)) return;
     
     let result = [...exercises];
     
-    // Apply search filter
     if (searchTerm) {
       result = result.filter(exercise => 
         exercise.name.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
     
-    // Apply muscle group filter
     if (muscleGroupFilter) {
       result = result.filter(exercise => 
         exercise.muscle_group === muscleGroupFilter
       );
     }
     
-    // Apply equipment filter
     if (equipmentFilter) {
       result = result.filter(exercise => 
         exercise.equipment === equipmentFilter
@@ -111,14 +112,47 @@ const ExerciseBrowser = () => {
     setFilteredExercises(result);
   }, [exercises, searchTerm, muscleGroupFilter, equipmentFilter]);
   
-  // Reset all filters
+  // Effect to aggregate exercise variations
+  useEffect(() => {
+    if (!routines || !exercises) {
+      console.log('Missing routines or exercises:', { routines, exercises });
+      return;
+    }
+
+    const variationsMap = {};
+    exercises.forEach(exercise => {
+      variationsMap[exercise.id] = [];
+    });
+
+    routines.forEach(routine => {
+      const routineVariations = Array.isArray(routine.variations) ? routine.variations : [];
+      routineVariations.forEach(variation => {
+        if (!variation || !variation.exercise_id) {
+          console.log('Invalid variation:', variation);
+          return;
+        }
+        const exerciseId = variation.exercise_id;
+        if (variationsMap[exerciseId]) {
+          variationsMap[exerciseId].push({
+            id: variation.id,
+            name: variation.name,
+            variation_type: variation.variation_type || 'Standard'
+          });
+        }
+      });
+    });
+
+    console.log('Final exercise variations map:', variationsMap);
+    setExerciseVariations(variationsMap);
+  }, [routines, exercises]);
+  
+  // **Handlers**
   const resetFilters = () => {
     setSearchTerm('');
     setMuscleGroupFilter('');
     setEquipmentFilter('');
   };
   
-  // Handle form input changes
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData({
@@ -127,7 +161,6 @@ const ExerciseBrowser = () => {
     });
   };
   
-  // Handle variation data input changes
   const handleVariationChange = (e) => {
     const { name, value } = e.target;
     setVariationData({
@@ -135,7 +168,6 @@ const ExerciseBrowser = () => {
       [name]: value
     });
     
-    // Update name if variation type changes
     if (name === 'variation_type' && exerciseToAdd) {
       setVariationData(prev => ({
         ...prev,
@@ -144,7 +176,6 @@ const ExerciseBrowser = () => {
     }
   };
   
-  // Handle adding exercise to routine
   const handleAddToRoutine = async (e) => {
     e.preventDefault();
     
@@ -170,7 +201,6 @@ const ExerciseBrowser = () => {
     
     try {
       console.log(`Adding exercise ${exerciseToAdd.id} to routine ${selectedRoutineId}:`, exerciseData);
-      
       const result = await addExerciseToRoutine(selectedRoutineId, exerciseData);
       console.log('Exercise added to routine:', result);
       
@@ -194,7 +224,6 @@ const ExerciseBrowser = () => {
     }
   };
   
-  // Select an exercise to add to a routine
   const selectExerciseToAdd = (exercise) => {
     setExerciseToAdd(exercise);
     setVariationData({
@@ -208,14 +237,12 @@ const ExerciseBrowser = () => {
     setShowAddToRoutine(true);
   };
   
-  // Cancel adding exercise to routine
   const cancelAddToRoutine = () => {
     setShowAddToRoutine(false);
     setExerciseToAdd(null);
     setSelectedRoutineId('');
   };
   
-  // Validate form
   const validateForm = () => {
     const errors = {};
     
@@ -233,7 +260,6 @@ const ExerciseBrowser = () => {
     return Object.keys(errors).length === 0;
   };
   
-  // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -242,21 +268,15 @@ const ExerciseBrowser = () => {
     }
     
     try {
-      // Use the createExercise function from AppContext
       const newExercise = await createExercise(formData);
-      
       if (newExercise) {
         console.log('New exercise created:', newExercise);
-        
-        // Reset form data
         setFormData({
           name: '',
           description: '',
           muscle_group: '',
           equipment: ''
         });
-        
-        // Success message
         alert('Exercise created successfully!');
       }
     } catch (error) {
@@ -264,6 +284,7 @@ const ExerciseBrowser = () => {
     }
   };
   
+  // **Render**
   return (
     <div className="app-container">
       <Navbar />
@@ -286,7 +307,7 @@ const ExerciseBrowser = () => {
           </div>
         </div>
         
-        {/* Add Exercise to Routine Modal with Variation Selection */}
+        {/* Add Exercise to Routine Modal */}
         {showAddToRoutine && exerciseToAdd && (
           <div className="add-to-routine-modal">
             <div className="modal-header">
@@ -319,7 +340,6 @@ const ExerciseBrowser = () => {
                 </select>
               </div>
               
-              {/* Variation Type Selection - Enhanced */}
               <div className="form-group">
                 <label htmlFor="variation_type">Variation Type</label>
                 <select
@@ -509,6 +529,7 @@ const ExerciseBrowser = () => {
           </form>
         </div>
         
+        {/* Exercise List */}
         <div className="exercise-results">
           {isLoading.initial ? (
             <div className="loading">Loading exercises...</div>
@@ -528,32 +549,30 @@ const ExerciseBrowser = () => {
                 <div key={exercise.id} className="exercise-card">
                   <h3>{exercise.name}</h3>
                   
-                  {exercise.muscle_group && (
-                    <div className="exercise-muscle">{exercise.muscle_group}</div>
-                  )}
-                  
-                  {exercise.equipment && (
-                    <div className="exercise-equipment">
-                      <span>Equipment:</span> {exercise.equipment}
-                    </div>
-                  )}
-                  
                   {exercise.description && (
                     <div className="exercise-description">
-                      <p>{exercise.description.substring(0, 100)}
+                      <p>
+                        {exercise.description.substring(0, 100)}
                         {exercise.description.length > 100 ? '...' : ''}
                       </p>
                     </div>
                   )}
                   
+                  {exerciseVariations[exercise.id] && exerciseVariations[exercise.id].length > 0 && (
+                    <div className="exercise-variations">
+                      <h4>Variations:</h4>
+                      <ul>
+                        {exerciseVariations[exercise.id].map(variation => (
+                          <li key={variation.id}>
+                            <strong>{variation.variation_type}</strong> - {variation.name}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  
                   <div className="exercise-actions">
-                    <button
-                      type="button"
-                      className="btn btn-primary"
-                      onClick={() => selectExerciseToAdd(exercise)}
-                    >
-                      Add to Routine
-                    </button>
+
                   </div>
                 </div>
               ))}

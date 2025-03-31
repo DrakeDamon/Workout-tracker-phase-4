@@ -11,7 +11,7 @@ const RoutineDetail = () => {
     getRoutineById, 
     currentRoutine, 
     updateRoutine,
-    updateRoutineExercise,
+    updateVariation, // Added this
     removeExerciseFromRoutine,
     addExerciseToRoutine,
     exercises,
@@ -109,9 +109,7 @@ const RoutineDetail = () => {
         // Gather available variations for each exercise
         const variations = {};
         exerciseList.forEach(re => {
-          // If we don't already have this exercise in our variations
           if (!variations[re.exercise_id]) {
-            // Find all variations of this exercise in the system
             const sameExerciseVariations = exercises
               .filter(ex => ex.id === re.exercise_id)
               .map(ex => ({
@@ -180,7 +178,6 @@ const RoutineDetail = () => {
       [field]: value
     });
     
-    // If exercise_id changes, update the name with the exercise name
     if (field === 'exercise_id' && value) {
       const selectedExercise = exercises.find(ex => ex.id === parseInt(value, 10));
       if (selectedExercise) {
@@ -197,7 +194,6 @@ const RoutineDetail = () => {
       }
     }
     
-    // If variation type changes, update the name
     if (field === 'variation_type' && value && newExerciseData.exercise_id) {
       const selectedExercise = exercises.find(ex => ex.id === newExerciseData.exercise_id);
       if (selectedExercise) {
@@ -228,7 +224,6 @@ const RoutineDetail = () => {
       console.log('New routine exercise added:', newRoutineExercise);
       
       if (newRoutineExercise) {
-        // Reset form and hide it
         setNewExerciseData({
           exercise_id: '',
           name: '',
@@ -258,12 +253,11 @@ const RoutineDetail = () => {
       const updatedRoutine = await updateRoutine(routineId, routineFormData);
       console.log('Routine updated:', updatedRoutine);
       
-      // Update exercises one by one
+      // Update exercises one by one using updateVariation
       for (const exercise of exerciseFormData) {
-        console.log('Updating exercise:', exercise);
+        console.log('Updating variation:', exercise);
         
-        // Create a clean data object with only the fields your API expects
-        const exerciseData = {
+        const variationData = {
           name: exercise.name,
           variation_type: exercise.variation_type,
           sets: parseInt(exercise.sets) || 0,
@@ -272,8 +266,8 @@ const RoutineDetail = () => {
           notes: exercise.notes || ''
         };
         
-        // Use the variation_id (join table ID) for the update
-        await updateRoutineExercise(routineId, exercise.variation_id, exerciseData);
+        // Use updateVariation with routineId and variationId
+        await updateVariation(routineId, exercise.variation_id, variationData);
       }
       
       alert('Routine updated successfully!');
@@ -290,7 +284,6 @@ const RoutineDetail = () => {
       console.log(`Removing exercise variation ${variationId} from routine ${routineId}`);
       
       try {
-        // Pass the variation ID (the join table ID) to remove
         await removeExerciseFromRoutine(routineId, variationId);
         console.log(`Exercise variation ${variationId} removed successfully`);
       } catch (error) {
@@ -533,7 +526,6 @@ const RoutineDetail = () => {
                 {exerciseList.map((routineExercise, index) => {
                   console.log('Rendering exercise:', routineExercise);
                   
-                  // Get the base exercise data - handle different possible structures
                   const exercise = routineExercise.exercise || 
                                   exercises.find(e => e.id === routineExercise.exercise_id) || 
                                   { name: routineExercise.name };

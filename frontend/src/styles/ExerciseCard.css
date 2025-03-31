@@ -1,0 +1,72 @@
+/* frontend/src/styles/ExerciseCard.css */
+
+/* Main exercise card container */
+.exercise-card {
+  background-color: #f8f9fa; /* Light background consistent with a clean design */
+  border: 1px solid #dee2e6; /* Subtle border similar to form controls */
+  border-radius: 8px; /* Slightly more rounded than 4px for a softer look */
+  padding: 15px; /* Comfortable internal spacing */
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Soft shadow for depth */
+  transition: transform 0.2s, box-shadow 0.2s; /* Smooth hover effects */
+}
+
+/* Hover effect for interactivity */
+.exercise-card:hover {
+  transform: translateY(-5px); /* Slight lift on hover */
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15); /* Enhanced shadow on hover */
+}
+
+/* Header section for exercise name */
+.exercise-card-header {
+  margin-bottom: 10px; /* Space below header */
+}
+
+.exercise-card-header h3 {
+  margin: 0; /* Remove default margin */
+  font-size: 1.25em; /* Larger text for emphasis, readable size */
+  color: #333; /* Matches header color in ExerciseBrowser */
+}
+
+/* Description section */
+.exercise-card-description {
+  margin-bottom: 15px; /* Space below description */
+}
+
+.exercise-card-description p {
+  margin: 0; /* Remove default margin */
+  font-size: 0.9em; /* Smaller text for secondary info */
+  color: #666; /* Muted text color consistent with no-exercises */
+  line-height: 1.4; /* Improved readability */
+}
+
+/* Actions section (e.g., buttons) */
+.exercise-card-actions {
+  display: flex; /* Horizontal layout for buttons */
+  gap: 10px; /* Consistent spacing, matches search-box gap */
+}
+
+/* Reusing and extending button styles from ExerciseBrowser.css */
+.btn {
+  padding: 8px 16px; /* Matches ExerciseBrowser button padding */
+  border: none;
+  border-radius: 4px; /* Matches ExerciseBrowser button radius */
+  cursor: pointer;
+}
+
+.btn-primary {
+  background-color: #007bff; /* Consistent with btn-link color */
+  color: white;
+}
+
+.btn-primary:hover {
+  background-color: #0056b3; /* Darker shade for hover */
+}
+
+.btn-secondary {
+  background-color: #6c757d; /* Matches ExerciseBrowser btn-secondary */
+  color: white;
+}
+
+.btn-secondary:hover {
+  background-color: #5a6268; /* Matches ExerciseBrowser btn-secondary hover */
+}

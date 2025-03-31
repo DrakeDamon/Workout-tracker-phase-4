@@ -627,6 +627,26 @@ const updateExerciseVariation = async (variationId, variationData) => {
   }
 };
 
+const updateVariation = async (routineId, variationId, updatedData) => {
+  try {
+    const updatedVariation = await api.updateRoutineExercise(routineId, variationId, updatedData);
+    setRoutines(prevRoutines =>
+      prevRoutines.map(routine =>
+        routine.id === routineId
+          ? {
+              ...routine,
+              variations: routine.variations.map(v =>
+                v.id === variationId ? { ...v, ...updatedVariation } : v
+              ),
+            }
+          : routine
+      )
+    );
+  } catch (error) {
+    console.error('Error updating variation:', error);
+  }
+};
+
 const getExerciseVariations = async (filters = {}) => {
   try {
     const variations = await api.getExerciseVariations(filters);
@@ -667,6 +687,7 @@ const getExerciseVariations = async (filters = {}) => {
     updateRoutineExercise,
     removeExerciseFromRoutine,
     getRoutineExercises,
+    updateVariation, 
     
     // Variation type functions
     createVariationType,
