@@ -70,6 +70,7 @@ const VariationsManager = () => {
             variation_type: variation.variation_type || 'Standard', // Default if missing
             routine_name: routine.name,
             routine_day: routine.day_of_week,
+            routine_id: routine.id, // Store the routine ID with each variation
             exercise_name: exercise ? exercise.name : 'Unknown Exercise',
             exercise_muscle_group: exercise ? exercise.muscle_group : '',
             exercise_equipment: exercise ? exercise.equipment : ''
@@ -92,24 +93,32 @@ const VariationsManager = () => {
   }, [routines, exercises]);
   
   // Handle variation type change for a variation
-  const handleVariationTypeChange = async (variationId, newVariationType) => {
+  const handleVariationTypeChange = async (variationId, newVariationType, routineId) => {
     try {
+      console.log(`Updating variation ${variationId} in routine ${routineId} to type: ${newVariationType}`);
+      
       const variationData = {
         variation_type: newVariationType || 'Standard',
       };
       
-      const updatedVariation = await updateExerciseVariation(variationId, variationData);
+      // Call the context function with routineId
+      const updatedVariation = await updateExerciseVariation(routineId, variationId, variationData);
       
-      setVariations(prev =>
-        prev.map(variation =>
-          variation.id === variationId
-            ? {
-                ...variation,
-                variation_type: updatedVariation.variation_type
-              }
-            : variation
-        )
-      );
+      if (updatedVariation) {
+        console.log('Variation updated successfully:', updatedVariation);
+        
+        // Update the local state
+        setVariations(prev =>
+          prev.map(variation =>
+            variation.id === variationId
+              ? {
+                  ...variation,
+                  variation_type: newVariationType
+                }
+              : variation
+          )
+        );
+      }
     } catch (error) {
       console.error('Failed to update variation type:', error);
       setError('Failed to update variation type. Please try again.');
@@ -561,7 +570,7 @@ const VariationsManager = () => {
                       <select
                         className="form-control"
                         value={variation.variation_type || 'Standard'}
-                        onChange={(e) => handleVariationTypeChange(variation.id, e.target.value)}
+                        onChange={(e) => handleVariationTypeChange(variation.id, e.target.value, variation.routine_id)}
                       >
                         {variationTypes.map(type => (
                           <option key={type.id} value={type.name}>{type.name}</option>

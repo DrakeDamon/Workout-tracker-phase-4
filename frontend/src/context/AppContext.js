@@ -535,7 +535,6 @@ function AppProvider({ children }) {
   
 
   // Create a new variation type
- // Updated createVariationType function for AppContext.js
 const createVariationType = async (typeName, description = '') => {
   console.log(`Creating new variation type: ${typeName}`);
   setIsLoading(prev => ({ ...prev, form: true }));
@@ -568,55 +567,63 @@ const createVariationType = async (typeName, description = '') => {
   }
 };
 
-const updateExerciseVariation = async (variationId, variationData) => {
-  console.log(`Updating exercise variation ${variationId} with data:`, variationData);
+const updateExerciseVariation = async (routineId, variationId, variationData) => {
+  console.log(`Updating exercise variation ${variationId} in routine ${routineId} with data:`, variationData);
   setIsLoading(prev => ({ ...prev, update: variationId }));
   
   try {
-    const updatedVariation = await api.updateExerciseVariation(variationId, variationData);
+    // Use the updateRoutineExercise API function which takes routineId and variationId
+    const updatedVariation = await api.updateRoutineExercise(routineId, variationId, variationData);
     console.log('Variation updated:', updatedVariation);
 
     // Update routines state
     setRoutines(prev => {
       return prev.map(routine => {
-        const updatedRoutine = { ...routine };
-        if (updatedRoutine.variations) {
-          updatedRoutine.variations = updatedRoutine.variations.map(v =>
-            v.id === variationId ? updatedVariation : v
-          );
-          // If moving to this routine
-          if (routine.id === updatedVariation.routine_id && !updatedRoutine.variations.some(v => v.id === variationId)) {
-            updatedRoutine.variations.push(updatedVariation);
+        // Only update the specific routine
+        if (routine.id === parseInt(routineId, 10)) {
+          // Create a copy of the routine
+          const updatedRoutine = {...routine};
+          
+          // Update the specific variation within this routine
+          if (updatedRoutine.variations) {
+            updatedRoutine.variations = updatedRoutine.variations.map(v => 
+              v.id === variationId ? { ...v, ...variationData } : v
+            );
+          } else if (updatedRoutine.exercises) {
+            updatedRoutine.exercises = updatedRoutine.exercises.map(e => 
+              e.id === variationId ? { ...e, ...variationData } : e
+            );
           }
-          // If moving away from this routine
-          if (routine.id !== updatedVariation.routine_id) {
-            updatedRoutine.variations = updatedRoutine.variations.filter(v => v.id !== variationId);
-          }
+          
+          return updatedRoutine;
         }
-        return updatedRoutine;
+        return routine;
       });
     });
 
-    // Update currentRoutine if affected
-    if (currentRoutine) {
+    // Update currentRoutine if it's the active one
+    if (currentRoutine && currentRoutine.id === parseInt(routineId, 10)) {
       setCurrentRoutine(prev => {
-        const updated = { ...prev };
+        const updated = {...prev};
+        
+        // Update the variation in the current routine
         if (updated.variations) {
-          updated.variations = updated.variations.map(v =>
-            v.id === variationId ? updatedVariation : v
+          updated.variations = updated.variations.map(v => 
+            v.id === variationId ? { ...v, ...variationData } : v
           );
-          if (prev.id === updatedVariation.routine_id && !updated.variations.some(v => v.id === variationId)) {
-            updated.variations.push(updatedVariation);
-          }
-          if (prev.id !== updatedVariation.routine_id) {
-            updated.variations = updated.variations.filter(v => v.id !== variationId);
-          }
+        } else if (updated.exercises) {
+          updated.exercises = updated.exercises.map(e => 
+            e.id === variationId ? { ...e, ...variationData } : e
+          );
         }
+        
         return updated;
       });
     }
-
+    
+    // Clear errors
     setErrors(prev => ({ ...prev, form: null }));
+    
     return updatedVariation;
   } catch (err) {
     console.error('Error updating variation:', err);
