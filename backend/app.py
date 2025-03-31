@@ -363,6 +363,30 @@ class VariationResource(Resource):
             db.session.rollback()
             return {"error": "An error occurred while deleting the variation"}, 500
 
+
+
+class RoutineExercisesResource(Resource):
+    def get(self, routine_id):
+        """Get all exercises for a specific routine through variations"""
+        routine = Routine.query.get(routine_id)
+        if not routine:
+            return {"error": "Routine not found"}, 404
+        
+        # Get all variations for this routine
+        variations = Variation.query.filter_by(routine_id=routine_id).all()
+        
+        # Get the exercises through the variations
+        exercises = []
+        for variation in variations:
+            exercise = Exercise.query.get(variation.exercise_id)
+            if exercise:
+                exercise_data = exercise.to_dict()
+                # Add variation data
+                exercise_data['variation'] = variation.to_dict()
+                exercises.append(exercise_data)
+        
+        return exercises, 200
+
 # VariationTypes Resource - gets unique variation types from existing variations
 class VariationTypesResource(Resource):
     def get(self):
@@ -446,7 +470,7 @@ api.add_resource(ExerciseResource, '/api/exercises/<int:exercise_id>')
 api.add_resource(VariationListResource, '/api/routines/<int:routine_id>/variations')
 api.add_resource(VariationResource, '/api/routines/<int:routine_id>/variations/<int:variation_id>')
 api.add_resource(VariationTypesResource, '/api/variation-types')
-
+api.add_resource(RoutineExercisesResource, '/api/routines/<int:routine_id>/exercises')
 # For running the app directly
 if __name__ == '__main__':
     app.run(debug=True, port=5555)

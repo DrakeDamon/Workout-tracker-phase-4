@@ -11,7 +11,8 @@ const VariationsManager = () => {
     routines,
     variationTypes,
     addExerciseToRoutine,
-    createVariationType, // Use the function from context
+    createVariationType,
+    updateExerciseVariation,
     isLoading, 
     errors
   } = useAppContext();
@@ -52,23 +53,25 @@ const VariationsManager = () => {
       setLoading(true);
       const allVariations = [];
       
-      // For each routine, get its variations
       routines.forEach(routine => {
         const routineVariations = routine.variations || [];
         
-        // Add routine info to each variation for easier filtering/display
-        const mappedVariations = routineVariations.map(variation => {
-          const exercise = exercises.find(ex => ex.id === variation.exercise_id);
-          
-          return {
-            ...variation,
-            routine_name: routine.name,
-            routine_day: routine.day_of_week,
-            exercise_name: exercise ? exercise.name : 'Unknown Exercise',
-            exercise_muscle_group: exercise ? exercise.muscle_group : '',
-            exercise_equipment: exercise ? exercise.equipment : ''
-          };
-        });
+        // Filter out null/undefined variations and ensure they have an id
+        const mappedVariations = routineVariations
+          .filter(variation => variation && typeof variation === 'object' && variation.id)
+          .map(variation => {
+            const exercise = exercises.find(ex => ex.id === variation.exercise_id);
+            
+            return {
+              ...variation,
+              variation_type: variation.variation_type || 'Standard', // Ensure variation_type has a default
+              routine_name: routine.name,
+              routine_day: routine.day_of_week,
+              exercise_name: exercise ? exercise.name : 'Unknown Exercise',
+              exercise_muscle_group: exercise ? exercise.muscle_group : '',
+              exercise_equipment: exercise ? exercise.equipment : ''
+            };
+          });
         
         allVariations.push(...mappedVariations);
       });
@@ -82,19 +85,43 @@ const VariationsManager = () => {
     }
   }, [routines, exercises]);
   
+  // Handle variation type change for a variation
+  const handleVariationTypeChange = async (variationId, newVariationType) => {
+    try {
+      const variationData = {
+        variation_type: newVariationType || 'Standard',
+      };
+      
+      const updatedVariation = await updateExerciseVariation(variationId, variationData);
+      
+      setVariations(prev =>
+        prev.map(variation =>
+          variation.id === variationId
+            ? {
+                ...variation,
+                variation_type: updatedVariation.variation_type
+              }
+            : variation
+        )
+      );
+    } catch (error) {
+      console.error('Failed to update variation type:', error);
+      setError('Failed to update variation type. Please try again.');
+    }
+  };
+  
   // Filter variations based on filters
   const filteredVariations = variations.filter(variation => {
-    // Apply search filter
-    if (searchTerm && !variation.name.toLowerCase().includes(searchTerm.toLowerCase())) {
+    if (!variation) return false; // Extra safety check
+    
+    if (searchTerm && !variation.exercise_name.toLowerCase().includes(searchTerm.toLowerCase())) {
       return false;
     }
     
-    // Apply muscle group filter
     if (muscleGroupFilter && variation.exercise_muscle_group !== muscleGroupFilter) {
       return false;
     }
     
-    // Apply type filter
     if (typeFilter && variation.variation_type !== typeFilter) {
       return false;
     }
@@ -119,7 +146,6 @@ const VariationsManager = () => {
       errors.type = 'Type name must be less than 50 characters';
     }
     
-    // Check if type already exists
     if (newVariationType && variationTypes.some(t => t.name.toLowerCase() === newVariationType.toLowerCase())) {
       errors.type = 'This variation type already exists';
     }
@@ -127,7 +153,7 @@ const VariationsManager = () => {
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
   };
-  
+
   // Handle create variation type
   const handleCreateType = async (e) => {
     e.preventDefault();
@@ -137,13 +163,9 @@ const VariationsManager = () => {
     }
     
     try {
-      // Call the createVariationType function from context
       const result = await createVariationType(newVariationType, typeDescription);
-      
       if (result) {
         alert(`New variation type "${newVariationType}" has been created!`);
-        
-        // Clear form
         setNewVariationType('');
         setTypeDescription('');
       }
@@ -158,7 +180,6 @@ const VariationsManager = () => {
     const exercise = exercises.find(ex => ex.id === parseInt(exerciseId, 10));
     if (exercise) {
       setSelectedExercise(exercise);
-      // Update variation name
       setExerciseData(prev => ({
         ...prev,
         name: `${exercise.name} (${prev.variation_type})`
@@ -174,7 +195,6 @@ const VariationsManager = () => {
       [name]: value
     }));
     
-    // Update name if variation type changes
     if (name === 'variation_type' && selectedExercise) {
       setExerciseData(prev => ({
         ...prev,
@@ -193,7 +213,6 @@ const VariationsManager = () => {
     }
     
     try {
-      // Prepare variation data for API
       const variationData = {
         exercise_id: selectedExercise.id,
         name: exerciseData.name,
@@ -204,13 +223,9 @@ const VariationsManager = () => {
         notes: exerciseData.notes
       };
       
-      // Add the variation to the routine
       const result = await addExerciseToRoutine(selectedRoutine, variationData);
-      
       if (result) {
         alert('Exercise variation added to routine successfully!');
-        
-        // Reset form
         setSelectedRoutine('');
         setSelectedExercise(null);
         setExerciseData({
@@ -524,9 +539,9 @@ const VariationsManager = () => {
               </div>
             ) : (
               <div className="variations-grid">
-                {filteredVariations.map(variation => (
+                {filteredVariations.map((variation, index) => (
                   <div key={variation.id} className="variation-card">
-                    <h3>{variation.name}</h3>
+                    <h3>{variation.exercise_name}</h3>
                     
                     <div className="variation-exercise">
                       <span>Exercise:</span> {variation.exercise_name}
@@ -536,7 +551,16 @@ const VariationsManager = () => {
                     </div>
                     
                     <div className="variation-type">
-                      <span>Type:</span> {variation.variation_type || 'Standard'}
+                      <label>Type:</label>
+                      <select
+                        className="form-control"
+                        value={variation.variation_type || 'Standard'}
+                        onChange={(e) => handleVariationTypeChange(variation.id, e.target.value)}
+                      >
+                        {variationTypes.map(type => (
+                          <option key={type.id} value={type.name}>{type.name}</option>
+                        ))}
+                      </select>
                     </div>
                     
                     <div className="variation-routine">
@@ -572,7 +596,7 @@ const VariationsManager = () => {
                     
                     <div className="variation-actions">
                       <Link 
-                        to={`/routines/${variation.routine_id}`} 
+                        to={`/routines/${variation.routine_id}/exercises`} 
                         className="btn btn-secondary"
                       >
                         Edit in Routine

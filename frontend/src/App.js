@@ -18,8 +18,7 @@ const AppRoutes = () => {
       <Route path="/routines/:routineId" element={<RoutineDetail />} />
       <Route path="/exercises" element={<ExerciseBrowser />} />
       <Route path="/variations" element={<VariationsManager />} />
-      
-      {/* Catch all route - redirect to dashboard */}
+      <Route path="/routines/:routineId/exercises" element={<RoutineDetail />} />            {/* Catch all route - redirect to dashboard */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

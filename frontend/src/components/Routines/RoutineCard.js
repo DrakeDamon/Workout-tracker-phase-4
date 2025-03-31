@@ -43,11 +43,11 @@ const RoutineCard = ({ routine }) => {
       </div>
       
       <div className="routine-actions">
-        <Link to={`/routines/${routine.id}`} className="view-btn">
-          View Details
+        <Link to={`/routines/${routine.id}/exercises`} className="view-btn">
+          View Exercises
         </Link>
-        <button 
-          onClick={handleDelete} 
+        <button
+          onClick={handleDelete}
           className="delete-btn"
           disabled={isDeletingThisRoutine}
         >

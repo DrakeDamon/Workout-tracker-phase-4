@@ -135,6 +135,10 @@ const api = {
     });
   },
 
+  getRoutineExercises: async (routineId) => {
+    return fetchWithErrorHandling(`${API_BASE_URL}/api/routines/${routineId}/exercises`);
+  },
+
   removeExerciseFromRoutine: async (routineId, variationId) => {
     console.log(`Removing exercise variation ${variationId} from routine ${routineId}`);
     return fetchWithErrorHandling(`${API_BASE_URL}/api/routines/${routineId}/variations/${variationId}`, {

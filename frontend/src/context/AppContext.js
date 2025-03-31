@@ -504,6 +504,36 @@ function AppProvider({ children }) {
     }
   };
 
+  const getRoutineExercises = async (routineId) => {
+    console.log(`Getting exercises for routine ${routineId}`);
+    setIsLoading(prev => ({ ...prev, initial: true }));
+    
+    try {
+      const exercises = await api.getRoutineExercises(routineId);
+      console.log(`Found ${exercises.length} exercises for routine ${routineId}`);
+      
+      // Update current routine with these exercises
+      if (currentRoutine && currentRoutine.id === parseInt(routineId, 10)) {
+        setCurrentRoutine(prev => ({
+          ...prev,
+          exercises: exercises
+        }));
+      }
+      
+      // Clear errors
+      setErrors(prev => ({ ...prev, initial: null }));
+      
+      return exercises;
+    } catch (err) {
+      console.error(`Error getting exercises for routine ${routineId}:`, err);
+      setErrors(prev => ({ ...prev, initial: err.message || 'Failed to get routine exercises' }));
+      return [];
+    } finally {
+      setIsLoading(prev => ({ ...prev, initial: false }));
+    }
+  };
+  
+
   // Create a new variation type
  // Updated createVariationType function for AppContext.js
 const createVariationType = async (typeName, description = '') => {
@@ -538,6 +568,76 @@ const createVariationType = async (typeName, description = '') => {
   }
 };
 
+const updateExerciseVariation = async (variationId, variationData) => {
+  console.log(`Updating exercise variation ${variationId} with data:`, variationData);
+  setIsLoading(prev => ({ ...prev, update: variationId }));
+  
+  try {
+    const updatedVariation = await api.updateExerciseVariation(variationId, variationData);
+    console.log('Variation updated:', updatedVariation);
+
+    // Update routines state
+    setRoutines(prev => {
+      return prev.map(routine => {
+        const updatedRoutine = { ...routine };
+        if (updatedRoutine.variations) {
+          updatedRoutine.variations = updatedRoutine.variations.map(v =>
+            v.id === variationId ? updatedVariation : v
+          );
+          // If moving to this routine
+          if (routine.id === updatedVariation.routine_id && !updatedRoutine.variations.some(v => v.id === variationId)) {
+            updatedRoutine.variations.push(updatedVariation);
+          }
+          // If moving away from this routine
+          if (routine.id !== updatedVariation.routine_id) {
+            updatedRoutine.variations = updatedRoutine.variations.filter(v => v.id !== variationId);
+          }
+        }
+        return updatedRoutine;
+      });
+    });
+
+    // Update currentRoutine if affected
+    if (currentRoutine) {
+      setCurrentRoutine(prev => {
+        const updated = { ...prev };
+        if (updated.variations) {
+          updated.variations = updated.variations.map(v =>
+            v.id === variationId ? updatedVariation : v
+          );
+          if (prev.id === updatedVariation.routine_id && !updated.variations.some(v => v.id === variationId)) {
+            updated.variations.push(updatedVariation);
+          }
+          if (prev.id !== updatedVariation.routine_id) {
+            updated.variations = updated.variations.filter(v => v.id !== variationId);
+          }
+        }
+        return updated;
+      });
+    }
+
+    setErrors(prev => ({ ...prev, form: null }));
+    return updatedVariation;
+  } catch (err) {
+    console.error('Error updating variation:', err);
+    setErrors(prev => ({ ...prev, form: err.message || 'Failed to update variation' }));
+    return null;
+  } finally {
+    setIsLoading(prev => ({ ...prev, update: null }));
+  }
+};
+
+const getExerciseVariations = async (filters = {}) => {
+  try {
+    const variations = await api.getExerciseVariations(filters);
+    return variations;
+  } catch (err) {
+    console.error('Error fetching variations:', err);
+    setErrors(prev => ({ ...prev, initial: err.message || 'Failed to fetch variations' }));
+    return [];
+  }
+};
+
   // Build the context value object
   const contextValue = {
     // Application data state
@@ -566,9 +666,12 @@ const createVariationType = async (typeName, description = '') => {
     addExerciseToRoutine,
     updateRoutineExercise,
     removeExerciseFromRoutine,
+    getRoutineExercises,
     
     // Variation type functions
-    createVariationType
+    createVariationType,
+    updateExerciseVariation,
+    getExerciseVariations,
   };
 
   return (
